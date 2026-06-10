@@ -1,12 +1,670 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MiAgenda</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MiAgenda</title>
+<meta name="theme-color" content="#0057A8"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#F4F4F0;font-family:'Fredoka One',sans-serif;color:#111}
+input,select,textarea{outline:none;border:none;font-family:inherit}
+select option{font-family:Arial,sans-serif}
+@keyframes sand{0%{transform:rotate(0deg)}48%{transform:rotate(0deg)}50%{transform:rotate(180deg)}98%{transform:rotate(180deg)}100%{transform:rotate(360deg)}}
+@keyframes up{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes pop{0%{transform:scale(0.75);opacity:0}65%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.35}}
+@keyframes toastIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+.hourglass{display:inline-block;animation:sand 3s ease-in-out infinite}
+.up{animation:up 0.28s ease forwards}
+.pop{animation:pop 0.32s ease forwards}
+.blink{animation:blink 1.1s ease-in-out infinite}
+.toast-anim{animation:toastIn 0.35s ease forwards}
+.press:active{transform:scale(0.94)}
+.card:active{transform:scale(0.985)}
+.cal-cell:hover{opacity:0.8}
+.toggle-track{position:relative;width:52px;height:28px;border-radius:14px;cursor:pointer;transition:background 0.25s;border:none}
+.toggle-thumb{position:absolute;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);transition:left 0.25s}
+.chip{display:inline-flex;align-items:center;justify-content:center;border-radius:20px;padding:7px 14px;cursor:pointer;font-family:'Fredoka One',sans-serif;font-size:15px;transition:all 0.18s;border:3px solid transparent}
+.chip:active{transform:scale(0.93)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" style="min-height:100vh;background:#F4F4F0;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div class="up" id="login-box" style="background:#fff;border-radius:24px;padding:32px 28px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.12)">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:52px"><span class="hourglass">⏳</span></div>
+      <div style="font-size:30px;color:#0057A8;letter-spacing:1px;margin-top:4px">MiAgenda</div>
+      <div id="login-subtitle" style="font-size:14px;color:#888;font-family:'Nunito',sans-serif;font-weight:800;margin-top:4px">Iniciá sesión para continuar</div>
+    </div>
+    <div style="display:flex;background:#F4F4F0;border-radius:14px;padding:4px;margin-bottom:22px">
+      <button id="tab-login" class="press" onclick="setModo('login')"
+        style="flex:1;padding:10px 0;border-radius:11px;border:none;cursor:pointer;font-family:'Fredoka One',sans-serif;font-size:15px;background:#0057A8;color:#fff;transition:all 0.18s">
+        Ingresar
+      </button>
+      <button id="tab-registro" class="press" onclick="setModo('registro')"
+        style="flex:1;padding:10px 0;border-radius:11px;border:none;cursor:pointer;font-family:'Fredoka One',sans-serif;font-size:15px;background:transparent;color:#888;transition:all 0.18s">
+        Registrarme
+      </button>
+    </div>
+    <div id="campo-nombre" style="margin-bottom:14px;display:none">
+      <div style="font-size:12px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:6px">TU NOMBRE</div>
+      <input id="login-nombre" placeholder="Ej: Lucía Martínez"
+        style="width:100%;padding:13px 14px;border-radius:12px;background:#F4F4F0;border:3px solid #E0E0E0;color:#111;font-size:15px;font-family:'Nunito',sans-serif;font-weight:700;transition:border 0.2s"/>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:6px">EMAIL</div>
+      <input id="login-email" type="email" placeholder="tucorreo@gmail.com"
+        style="width:100%;padding:13px 14px;border-radius:12px;background:#F4F4F0;border:3px solid #E0E0E0;color:#111;font-size:15px;font-family:'Nunito',sans-serif;font-weight:700;transition:border 0.2s"/>
+    </div>
+    <div style="margin-bottom:22px">
+      <div style="font-size:12px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:6px">CONTRASEÑA</div>
+      <input id="login-pass" type="password" placeholder="Tu contraseña"
+        style="width:100%;padding:13px 14px;border-radius:12px;background:#F4F4F0;border:3px solid #E0E0E0;color:#111;font-size:15px;font-family:'Nunito',sans-serif;font-weight:700;transition:border 0.2s"/>
+    </div>
+    <div id="login-error" style="background:#FFE8EB;border:2px solid #E8001D;border-radius:10px;padding:10px 14px;margin-bottom:16px;color:#E8001D;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;display:none"></div>
+    <button id="btn-login" class="press" onclick="doAuth()"
+      style="width:100%;padding:16px;border-radius:16px;border:none;cursor:pointer;background:#0057A8;color:#fff;font-family:'Fredoka One',sans-serif;font-size:20px;letter-spacing:0.5px;box-shadow:0 5px 20px #0057A855;transition:all 0.2s">
+      Ingresar 🚀
+    </button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen" style="display:none;min-height:100vh;background:#F4F4F0;max-width:480px;margin:0 auto;position:relative;padding-bottom:80px">
+
+  <!-- TOASTS -->
+  <div id="toast-container" style="position:fixed;top:12px;right:12px;z-index:999;display:flex;flex-direction:column;gap:8px;max-width:300px"></div>
+
+  <!-- HEADER -->
+  <div id="app-header" style="padding:18px 18px 14px;position:relative;overflow:hidden">
+    <div style="position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.15)"></div>
+    <div style="position:absolute;right:30px;bottom:-40px;width:90px;height:90px;border-radius:50%;background:rgba(0,0,0,0.08)"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;position:relative">
+      <div>
+        <div style="font-size:28px;color:#fff;letter-spacing:1px;text-shadow:2px 2px 0 rgba(0,0,0,0.15)">
+          <span class="hourglass">⏳</span> MiAgenda
+        </div>
+        <div id="header-saludo" style="font-size:13px;color:#fff;margin-top:2px;font-family:'Nunito',sans-serif;font-weight:900"></div>
+        <div id="header-fecha" style="font-size:12px;color:rgba(255,255,255,0.85);font-family:'Nunito',sans-serif;font-weight:800"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="press" onclick="toggleCfg()" id="btn-cfg"
+          style="background:rgba(255,255,255,0.25);border:2px solid rgba(255,255,255,0.5);border-radius:12px;width:40px;height:40px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative">
+          ⚙️
+          <div id="notif-dot" style="display:none;position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:#00A651;border:2px solid #0057A8"></div>
+        </button>
+        <button class="press" onclick="doLogout()"
+          style="background:rgba(255,255,255,0.25);border:2px solid rgba(255,255,255,0.5);border-radius:12px;width:40px;height:40px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">
+          🚪
+        </button>
+        <div style="background:rgba(255,255,255,0.25);border-radius:14px;padding:6px 14px;border:2px solid rgba(255,255,255,0.5);text-align:center">
+          <span id="header-count" style="color:#fff;font-family:'Fredoka One',sans-serif;font-size:24px;display:block;line-height:1">0</span>
+          <span style="color:rgba(255,255,255,0.9);font-size:11px;font-family:'Nunito',sans-serif;font-weight:800">próximas</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <div id="app-nav" style="display:flex;background:#fff;border-bottom:3px solid #F4F4F0;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+    <button class="press" onclick="setScreen('resumen')" data-screen="resumen"
+      style="flex:1;padding:11px 0;background:#F4F4F0;border:none;border-bottom:4px solid #0057A8;color:#0057A8;font-family:'Fredoka One',sans-serif;font-size:13px;cursor:pointer;transition:all 0.18s;letter-spacing:0.5px">
+      📋 Resumen
+    </button>
+    <button class="press" onclick="setScreen('agenda')" data-screen="agenda"
+      style="flex:1;padding:11px 0;background:transparent;border:none;border-bottom:4px solid transparent;color:#111;font-family:'Fredoka One',sans-serif;font-size:13px;cursor:pointer;transition:all 0.18s;letter-spacing:0.5px">
+      🗓️ Agenda
+    </button>
+    <button class="press" onclick="setScreen('nueva')" data-screen="nueva"
+      style="flex:1;padding:11px 0;background:transparent;border:none;border-bottom:4px solid transparent;color:#111;font-family:'Fredoka One',sans-serif;font-size:13px;cursor:pointer;transition:all 0.18s;letter-spacing:0.5px">
+      ➕ Nueva
+    </button>
+  </div>
+
+  <!-- PÁGINAS -->
+  <div id="page-resumen" style="padding:14px 12px" class="up"></div>
+  <div id="page-agenda" style="padding:14px 12px;display:none" class="up"></div>
+  <div id="page-nueva" style="padding:14px 12px;display:none" class="up"></div>
+
+  <!-- PANEL NOTIFICACIONES -->
+  <div id="cfg-panel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:flex-end;justify-content:center;z-index:200">
+    <div style="background:#fff;border-radius:24px 24px 0 0;padding:22px 20px 32px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,0.25)" class="pop">
+      <div style="width:40px;height:4px;border-radius:2px;background:#DDD;margin:0 auto 18px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div style="font-family:'Fredoka One',sans-serif;font-size:22px;color:#111">🔔 Notificaciones</div>
+        <button class="press" onclick="toggleCfg()" style="background:#F0F0F0;border:none;border-radius:10px;width:34px;height:34px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+      <div id="cfg-permiso" style="background:#F8F8F8;border-radius:14px;padding:12px 14px;margin-bottom:18px;border:2px solid #E8E8E8;display:flex;align-items:center;gap:12px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#F8F8F8;border-radius:14px;padding:14px 16px;margin-bottom:18px;border:2px solid #E8E8E8">
+        <div>
+          <div style="font-family:'Fredoka One',sans-serif;font-size:17px;color:#111">Avisos activados</div>
+          <div id="cfg-toggle-sub" style="font-family:'Nunito',sans-serif;font-weight:800;font-size:12px;color:#888;margin-top:2px">Los avisos están apagados</div>
+        </div>
+        <button id="notif-toggle" class="toggle-track press" onclick="toggleNotif()" style="background:#CCC">
+          <div id="notif-thumb" class="toggle-thumb" style="left:3px"></div>
+        </button>
+      </div>
+      <div id="cfg-extras" style="display:none">
+        <div style="margin-bottom:18px">
+          <div style="font-family:'Fredoka One',sans-serif;font-size:16px;color:#111;margin-bottom:4px">¿Cuántos días antes?</div>
+          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:12px;color:#888;margin-bottom:10px">Podés elegir más de uno</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap" id="chips-dias"></div>
+        </div>
+        <div style="margin-bottom:18px">
+          <div style="font-family:'Fredoka One',sans-serif;font-size:16px;color:#111;margin-bottom:10px">🕐 Horario del aviso</div>
+          <input type="time" id="notif-hora" onchange="setNotifHora(this.value)"
+            style="width:100%;padding:13px 14px;border-radius:12px;background:#fff;border:3px solid #0057A8;color:#111;font-size:18px;font-family:'Fredoka One',sans-serif"/>
+        </div>
+        <div style="margin-bottom:22px">
+          <div style="font-family:'Fredoka One',sans-serif;font-size:16px;color:#111;margin-bottom:4px">¿Cuántas veces por día?</div>
+          <div id="cfg-2do-aviso" style="font-family:'Nunito',sans-serif;font-weight:800;font-size:12px;color:#888;margin-bottom:10px;display:none"></div>
+          <div style="display:flex;gap:10px">
+            <button class="chip press" id="chip-1vez" onclick="setVeces(1)"
+              style="flex:1;background:#FF6600;color:#fff;border:3px solid #FF6600;box-shadow:0 3px 10px #FF660044;padding:10px 0;font-size:15px">1 vez por día</button>
+            <button class="chip press" id="chip-2vez" onclick="setVeces(2)"
+              style="flex:1;background:#fff;color:#111;border:3px solid #DDD;padding:10px 0;font-size:15px">2 veces por día</button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="press" onclick="testNotif()"
+          style="flex:1;padding:13px;border-radius:14px;background:#F0F0F0;border:3px solid #DDD;color:#111;font-family:'Fredoka One',sans-serif;font-size:15px;cursor:pointer">
+          🧪 Probar aviso
+        </button>
+        <button class="press" id="btn-guardar-cfg" onclick="saveCfg()"
+          style="flex:1;padding:13px;border-radius:14px;background:#0057A8;border:none;color:#fff;font-family:'Fredoka One',sans-serif;font-size:15px;cursor:pointer;box-shadow:0 4px 14px #0057A855">
+          Guardar ✓
+        </button>
+      </div>
+      <div style="font-size:12px;color:#AAA;text-align:center;margin-top:12px;font-family:'Nunito',sans-serif;font-weight:700;line-height:1.5">
+        Los avisos funcionan cuando la app está abierta.
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ELIMINAR -->
+  <div id="modal-del" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;z-index:100;padding:20px">
+    <div style="background:#fff;border-radius:22px;padding:26px;width:100%;max-width:300px;border:4px solid #E8001D;box-shadow:0 8px 40px rgba(0,0,0,0.25)" class="pop">
+      <div style="font-size:42px;text-align:center;margin-bottom:10px">🗑️</div>
+      <div style="font-family:'Fredoka One',sans-serif;font-size:20px;text-align:center;margin-bottom:6px;color:#111">¿Eliminar actividad?</div>
+      <div style="font-size:14px;color:#888;text-align:center;margin-bottom:20px;font-family:'Nunito',sans-serif;font-weight:800">Esta acción no se puede deshacer</div>
+      <div style="display:flex;gap:10px">
+        <button class="press" onclick="cancelDel()"
+          style="flex:1;padding:13px;border-radius:12px;background:#F0F0F0;border:3px solid #DDD;color:#111;font-family:'Fredoka One',sans-serif;font-size:16px;cursor:pointer">Cancelar</button>
+        <button class="press" onclick="confirmDel()"
+          style="flex:1;padding:13px;border-radius:12px;background:#E8001D;border:3px solid #E8001D;color:#fff;font-family:'Fredoka One',sans-serif;font-size:16px;cursor:pointer;box-shadow:0 4px 14px #E8001D66">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc,
+  onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ⚠️ Reemplazar con los datos reales de Firebase Console → Configuración del proyecto
+const firebaseConfig = {
+  apiKey: "AIzaSyBTy1JKKbz9GpGTaOmT-1lQ4Z3zCqOTZfQ",
+  authDomain: "miagenda-37996.firebaseapp.com",
+  projectId: "miagenda-37996",
+  storageBucket: "miagenda-37996.appspot.com",
+  messagingSenderId: "626485085205",
+  appId: "1:626485085205:web:1be15baf1d7ab62676ba1c"
+};
+
+// ── INIT ──────────────────────────────────────────────────
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+window._auth = auth; window._db = db;
+window._setDoc = setDoc; window._deleteDoc = deleteDoc;
+window._doc = doc; window._collection = collection;
+window._query = query; window._orderBy = orderBy;
+window._serverTimestamp = serverTimestamp;
+window._onSnapshot = onSnapshot;
+window._createUser = createUserWithEmailAndPassword;
+window._signIn = signInWithEmailAndPassword;
+window._signOut = signOut;
+window._updateProfile = updateProfile;
+
+onAuthStateChanged(auth, user => {
+  if (user) { window._user = user; onLogin(user); }
+  else { window._user = null; showLoginScreen(); }
+});
+</script>
+
+<script>
+// ── CONSTANTES ────────────────────────────────────────────
+const B = {
+  red:"#E8001D",green:"#00A651",blue:"#0057A8",yellow:"#FFD100",
+  orange:"#FF6600",pink:"#E8006F",teal:"#00A99D",white:"#FFFFFF",black:"#111111",bg:"#F4F4F0"
+};
+const TIPOS = [
+  {id:"examen",    label:"📝 Examen",          color:B.red,    bg:"#FFE8EB"},
+  {id:"trabajo",   label:"📚 Trabajo Práctico", color:B.blue,   bg:"#E0EEFF"},
+  {id:"entrega",   label:"📦 Entrega",          color:B.green,  bg:"#E0F7ED"},
+  {id:"exposicion",label:"🎤 Exposición",       color:B.orange, bg:"#FFF0E0"},
+];
+const MATERIAS = ["Matemática","Lengua","Historia","Geografía","Biología","Física","Química","Inglés","Ed. Física","Arte","Música","Informática","Filosofía","Economía","Otra"];
+const DAYS_ES   = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const MONTH_COLORS = [B.blue,B.teal,B.green,B.green,B.yellow,B.orange,B.red,B.orange,B.pink,B.blue,B.teal,B.red];
+const DEFAULT_NOTIF = {enabled:false,diasAntes:[1,3],hora:"08:00",vecesAlDia:1,permiso:"default"};
+
+// ── ESTADO ────────────────────────────────────────────────
+let tasks=[], currentScreen="resumen", delId=null;
+let calYear=new Date().getFullYear(), calMonth=new Date().getMonth(), selDay=null;
+let notif={...DEFAULT_NOTIF}, notifTimer=null, cfgOpen=false;
+let form={titulo:"",materia:"Matemática",tipo:"examen",fecha:"",descripcion:""};
+
+const today=new Date(); today.setHours(0,0,0,0);
+const todayStr=today.toISOString().split("T")[0];
+
+// ── HELPERS ───────────────────────────────────────────────
+function getDaysLeft(d){const t=new Date();t.setHours(0,0,0,0);return Math.ceil((new Date(d+"T00:00:00")-t)/86400000)}
+function getUrgency(days){
+  if(days<0)  return{bg:"#CCCCCC",text:"#555",label:"Vencido",dot:"#AAAAAA"};
+  if(days===0)return{bg:B.red,text:B.white,label:"¡HOY!",dot:B.red};
+  if(days<=2) return{bg:B.orange,text:B.white,label:days===1?"Mañana":`${days} días`,dot:B.orange};
+  if(days<=5) return{bg:B.yellow,text:B.black,label:`${days} días`,dot:B.yellow};
+  if(days<=10)return{bg:B.green,text:B.white,label:`${days} días`,dot:B.green};
+  return{bg:B.blue,text:B.white,label:`${days} días`,dot:B.blue};
+}
+function getTipo(id){return TIPOS.find(t=>t.id===id)||TIPOS[0]}
+function fmtDate(d){return new Date(d+"T00:00:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"})}
+
+// ── AUTH ──────────────────────────────────────────────────
+let authModo = "login";
+function setModo(m){
+  authModo=m;
+  document.getElementById("tab-login").style.background=m==="login"?B.blue:"transparent";
+  document.getElementById("tab-login").style.color=m==="login"?"#fff":"#888";
+  document.getElementById("tab-registro").style.background=m==="registro"?B.blue:"transparent";
+  document.getElementById("tab-registro").style.color=m==="registro"?"#fff":"#888";
+  document.getElementById("campo-nombre").style.display=m==="registro"?"block":"none";
+  document.getElementById("login-subtitle").textContent=m==="login"?"Iniciá sesión para continuar":"Creá tu cuenta gratis";
+  document.getElementById("btn-login").textContent=m==="login"?"Ingresar 🚀":"Crear mi cuenta ✨";
+  document.getElementById("login-error").style.display="none";
+}
+
+async function doAuth(){
+  const email=document.getElementById("login-email").value.trim();
+  const pass=document.getElementById("login-pass").value;
+  const nombre=document.getElementById("login-nombre").value.trim();
+  const errEl=document.getElementById("login-error");
+  errEl.style.display="none";
+  if(!email||!pass){showError("Completá todos los campos");return}
+  document.getElementById("btn-login").textContent="Cargando...";
+  try{
+    if(authModo==="registro"){
+      if(!nombre){showError("Escribí tu nombre");return}
+      const cred=await window._createUser(window._auth,email,pass);
+      await window._updateProfile(cred.user,{displayName:nombre});
+      await window._setDoc(window._doc(window._db,"usuarios",cred.user.uid),{nombre,email:email.toLowerCase(),fechaRegistro:window._serverTimestamp()});
+    } else {
+      await window._signIn(window._auth,email,pass);
+    }
+  } catch(e){
+    const msgs={"auth/email-already-in-use":"Ese email ya está registrado","auth/invalid-email":"El email no es válido","auth/weak-password":"La contraseña debe tener al menos 6 caracteres","auth/user-not-found":"No existe una cuenta con ese email","auth/wrong-password":"Contraseña incorrecta","auth/invalid-credential":"Email o contraseña incorrectos"};
+    showError(msgs[e.code]||"Algo salió mal, intentá de nuevo");
+    document.getElementById("btn-login").textContent=authModo==="login"?"Ingresar 🚀":"Crear mi cuenta ✨";
+  }
+}
+
+function showError(msg){
+  const e=document.getElementById("login-error");
+  e.textContent="⚠️ "+msg; e.style.display="block";
+  document.getElementById("btn-login").textContent=authModo==="login"?"Ingresar 🚀":"Crear mi cuenta ✨";
+}
+
+function showLoginScreen(){
+  document.getElementById("login-screen").style.display="flex";
+  document.getElementById("app-screen").style.display="none";
+}
+
+function onLogin(user){
+  document.getElementById("login-screen").style.display="none";
+  document.getElementById("app-screen").style.display="block";
+  const nombre=user.displayName||user.email.split("@")[0];
+  document.getElementById("header-saludo").textContent=`Hola, ${nombre} 👋`;
+  document.getElementById("header-fecha").textContent=today.toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});
+  loadNotifCfg();
+  startFirestore();
+  renderHeader();
+}
+
+function doLogout(){window._signOut(window._auth)}
+
+// ── FIRESTORE ─────────────────────────────────────────────
+function startFirestore(){
+  const q=window._query(window._collection(window._db,"usuarios",window._user.uid,"tareas"),window._orderBy("fecha","asc"));
+  window._onSnapshot(q,snap=>{
+    tasks=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderAll();
+  });
+}
+
+async function saveTask(){
+  if(!form.titulo||!form.fecha||!window._user)return;
+  const id=Date.now().toString();
+  await window._setDoc(window._doc(window._db,"usuarios",window._user.uid,"tareas",id),{...form,creadoEn:window._serverTimestamp()});
+  form={titulo:"",materia:"Matemática",tipo:"examen",fecha:"",descripcion:""};
+  showToast("✅ ¡Actividad guardada!",B.green);
+  setScreen("resumen");
+}
+
+async function deleteTask(id){
+  await window._deleteDoc(window._doc(window._db,"usuarios",window._user.uid,"tareas",id));
+}
+
+// ── RENDER ────────────────────────────────────────────────
+function renderAll(){renderHeader();renderResumen();renderAgenda();renderNueva()}
+
+function renderHeader(){
+  const color=MONTH_COLORS[calMonth];
+  document.getElementById("app-header").style.background=color;
+  document.getElementById("app-header").querySelectorAll("*").forEach(el=>{if(el.id==="notif-dot")el.style.borderColor=color});
+  const upcoming=tasks.filter(t=>getDaysLeft(t.fecha)>=0);
+  document.getElementById("header-count").textContent=upcoming.length;
+  document.getElementById("notif-dot").style.display=notif.enabled?"block":"none";
+}
+
+function renderResumen(){
+  const el=document.getElementById("page-resumen");
+  const upcoming=tasks.map(t=>({...t,dl:getDaysLeft(t.fecha)})).filter(t=>t.dl>=0).sort((a,b)=>a.dl-b.dl);
+  const past=tasks.map(t=>({...t,dl:getDaysLeft(t.fecha)})).filter(t=>t.dl<0).sort((a,b)=>b.dl-a.dl);
+  let html=`<div style="font-family:'Fredoka One',sans-serif;font-size:24px;margin-bottom:16px;color:#111">Próximas actividades</div>`;
+  if(upcoming.length===0){
+    html+=`<div style="text-align:center;padding:40px 20px;background:#fff;border-radius:20px;border:3px dashed #CCC">
+      <div style="font-size:52px">🎉</div>
+      <div style="font-family:'Fredoka One',sans-serif;font-size:20px;margin-top:8px;color:${B.green}">¡Todo al día!</div>
+      <div style="font-size:14px;margin-top:4px;color:#888;font-family:'Nunito',sans-serif;font-weight:800">No tenés actividades pendientes</div>
+    </div>`;
+  }
+  upcoming.forEach((t,idx)=>{
+    const tipo=getTipo(t.tipo);const urg=getUrgency(t.dl);const hot=t.dl<=1;
+    html+=`<div class="card up" style="background:#fff;border-radius:16px;margin-bottom:12px;overflow:hidden;border:3px solid ${urg.dot};box-shadow:${hot?`0 4px 20px ${urg.dot}55`:"0 2px 10px rgba(0,0,0,0.07)"};animation-delay:${idx*0.05}s">
+      <div style="height:6px;background:${urg.bg}"></div>
+      <div style="padding:12px 14px">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+              <span style="font-size:12px;background:${tipo.bg};color:${tipo.color};padding:3px 10px;border-radius:20px;font-family:'Fredoka One',sans-serif;border:1.5px solid ${tipo.color}">${tipo.label}</span>
+              <span style="font-size:12px;color:#666;font-family:'Nunito',sans-serif;font-weight:800">${t.materia}</span>
+            </div>
+            <div style="font-family:'Fredoka One',sans-serif;font-size:18px;color:#111;line-height:1.2">${t.titulo}</div>
+            ${t.descripcion?`<div style="font-size:13px;color:#555;margin-top:5px;line-height:1.5;font-family:'Nunito',sans-serif;font-weight:700">${t.descripcion}</div>`:""}
+            <div style="font-size:12px;color:#888;margin-top:6px;font-family:'Nunito',sans-serif;font-weight:800">📅 ${fmtDate(t.fecha)}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <div class="${hot?"blink":""}" style="background:${urg.bg};color:${urg.text};border-radius:14px;padding:8px 12px;font-family:'Fredoka One',sans-serif;font-size:${t.dl===0?13:22}px;min-width:58px;text-align:center;box-shadow:${hot?`0 0 16px ${urg.dot}88`:"none"};border:2px solid ${urg.dot}">
+              ${t.dl===0?"¡HOY!":t.dl}
+            </div>
+            ${t.dl>1?`<div style="font-size:10px;color:#888;font-family:'Nunito',sans-serif;font-weight:900">DÍAS</div>`:""}
+            <button onclick="openDel('${t.id}')" style="background:none;border:none;cursor:pointer;font-size:18px;margin-top:2px">🗑️</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  });
+  html+=`<div style="background:#fff;border-radius:16px;padding:16px;border:2px solid #E8E8E8;margin-top:8px">
+    <div style="font-family:'Fredoka One',sans-serif;font-size:16px;margin-bottom:10px;color:#111">¿Qué significa cada color?</div>
+    ${[[B.red,B.white,"🔴 Hoy — ¡Es hoy!"],[B.orange,B.white,"🟠 1-2 días — ¡Urgente!"],[B.yellow,B.black,"🟡 3-5 días — ¡Atención!"],[B.green,B.white,"🟢 6-10 días — Con tiempo"],[B.blue,B.white,"🔵 +10 días — Tranquilo"]].map(([bg,col,lbl])=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+      <div style="width:36px;height:20px;border-radius:8px;background:${bg};flex-shrink:0"></div>
+      <span style="font-size:14px;font-family:'Nunito',sans-serif;font-weight:800;color:#111">${lbl}</span>
+    </div>`).join("")}
+  </div>`;
+  if(past.length>0){
+    html+=`<div style="font-family:'Fredoka One',sans-serif;font-size:18px;margin:20px 0 10px;color:#AAA">Actividades pasadas</div>`;
+    past.forEach(t=>{
+      const tipo=getTipo(t.tipo);
+      html+=`<div style="background:#F4F4F4;border-radius:12px;padding:10px 14px;margin-bottom:8px;border:2px solid #E0E0E0;opacity:0.65;display:flex;align-items:center;gap:10px">
+        <div style="flex:1">
+          <div style="font-family:'Fredoka One',sans-serif;font-size:15px;text-decoration:line-through;color:#AAA">${t.titulo}</div>
+          <div style="font-size:12px;color:#BBB;font-family:'Nunito',sans-serif;font-weight:800">${t.materia} · ${tipo.label}</div>
+        </div>
+        <button onclick="openDel('${t.id}')" style="background:none;border:none;cursor:pointer;font-size:16px;color:#CCC">🗑️</button>
+      </div>`;
+    });
+  }
+  el.innerHTML=html;
+}
+
+function renderAgenda(){
+  const el=document.getElementById("page-agenda");
+  const color=MONTH_COLORS[calMonth];
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  let html=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <button class="press" onclick="prevMonth()" style="background:${color};border:none;color:#fff;border-radius:10px;width:38px;height:38px;font-size:20px;cursor:pointer;box-shadow:2px 2px 0 rgba(0,0,0,0.15)">‹</button>
+      <div style="font-family:'Fredoka One',sans-serif;font-size:22px;color:${color}">${MONTHS_ES[calMonth]} ${calYear}</div>
+      <button class="press" onclick="nextMonth()" style="background:${color};border:none;color:#fff;border-radius:10px;width:38px;height:38px;font-size:20px;cursor:pointer;box-shadow:2px 2px 0 rgba(0,0,0,0.15)">›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px">
+      ${DAYS_ES.map((d,i)=>`<div style="text-align:center;font-size:12px;font-family:'Nunito',sans-serif;font-weight:900;color:${i===0||i===6?B.red:B.black};padding:4px 0">${d}</div>`).join("")}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">
+      ${Array(firstDay).fill('<div></div>').join("")}
+      ${Array(daysInMonth).fill(null).map((_,i)=>{
+        const day=i+1;
+        const ds=`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+        const dt=tasks.filter(t=>t.fecha===ds);
+        const isToday=ds===todayStr; const isSel=selDay===day;
+        const isWE=new Date(calYear,calMonth,day).getDay()===0||new Date(calYear,calMonth,day).getDay()===6;
+        return `<div class="cal-cell press" onclick="clickDay(${day})" style="border-radius:10px;padding:5px 2px;text-align:center;cursor:pointer;min-height:52px;background:${isSel?color:isToday?B.yellow:"#fff"};border:2px solid ${isSel?color:isToday?B.yellow:"#E0E0E0"};transition:all 0.15s">
+          <div style="font-size:15px;font-family:'Fredoka One',sans-serif;color:${isSel?"#fff":isToday?B.black:isWE?B.red:B.black}">${day}</div>
+          ${dt.length>0?`<div style="display:flex;justify-content:center;gap:2px;flex-wrap:wrap;margin-top:2px">${dt.slice(0,3).map(t=>`<div style="width:8px;height:8px;border-radius:50%;background:${getTipo(t.tipo).color};border:1.5px solid #fff"></div>`).join("")}</div>`:""}
+        </div>`;
+      }).join("")}
+    </div>`;
+  if(selDay){
+    const dt=tasks.filter(t=>t.fecha===`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(selDay).padStart(2,"0")}`);
+    html+=`<div style="margin-top:14px;background:#fff;border-radius:16px;padding:14px;border:3px solid ${color};box-shadow:0 4px 16px rgba(0,0,0,0.1)" class="pop">
+      <div style="font-family:'Fredoka One',sans-serif;font-size:18px;margin-bottom:10px;color:${color}">${selDay} de ${MONTHS_ES[calMonth]}</div>
+      ${dt.length===0?`<div style="color:#AAA;font-size:14px;text-align:center;padding:10px 0;font-family:'Nunito',sans-serif;font-weight:800">Sin actividades este día ✨</div>`
+      :dt.map(t=>{
+        const tipo=getTipo(t.tipo);const urg=getUrgency(getDaysLeft(t.fecha));
+        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${tipo.bg};border-radius:12px;margin-bottom:8px;border-left:5px solid ${tipo.color}">
+          <div style="flex:1">
+            <div style="font-family:'Fredoka One',sans-serif;font-size:15px;color:#111">${t.titulo}</div>
+            <div style="font-size:12px;color:#555;font-family:'Nunito',sans-serif;font-weight:800">${t.materia} · ${tipo.label}</div>
+          </div>
+          <div style="background:${urg.bg};color:${urg.text};border-radius:8px;padding:4px 10px;font-family:'Fredoka One',sans-serif;font-size:13px">${urg.label}</div>
+        </div>`;
+      }).join("")}
+    </div>`;
+  }
+  html+=`<div style="margin-top:14px;background:#fff;border-radius:14px;padding:10px 14px;border:2px solid #E8E8E8;display:flex;gap:10px;flex-wrap:wrap">
+    ${TIPOS.map(t=>`<div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:${t.color}"></div><span style="font-size:12px;font-family:'Nunito',sans-serif;font-weight:800;color:#111">${t.label.split(" ").slice(1).join(" ")}</span></div>`).join("")}
+  </div>`;
+  el.innerHTML=html;
+}
+
+function renderNueva(){
+  const el=document.getElementById("page-nueva");
+  let urgHTML="";
+  if(form.fecha){const d=getDaysLeft(form.fecha);const urg=getUrgency(d);urgHTML=`<div style="margin-top:7px;display:inline-block;background:${urg.bg};color:${urg.text};padding:4px 14px;border-radius:20px;font-family:'Fredoka One',sans-serif;font-size:14px;box-shadow:0 2px 8px ${urg.dot}55">⏱ ${urg.label}</div>`;}
+  el.innerHTML=`
+    <div style="font-family:'Fredoka One',sans-serif;font-size:26px;margin-bottom:18px;color:#111">Nueva Actividad ✏️</div>
+    <div style="margin-bottom:18px">
+      <div style="font-size:13px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:8px">TIPO DE ACTIVIDAD</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${TIPOS.map(t=>`<button class="press" onclick="setFormTipo('${t.id}')" style="padding:13px 8px;border-radius:14px;cursor:pointer;font-family:'Fredoka One',sans-serif;font-size:14px;background:${form.tipo===t.id?t.bg:"#fff"};border:3px solid ${form.tipo===t.id?t.color:"#E0E0E0"};color:${form.tipo===t.id?t.color:"#888"};box-shadow:${form.tipo===t.id?`0 3px 12px ${t.color}44`:"none"};transition:all 0.18s">${t.label}</button>`).join("")}
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:13px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:8px">MATERIA</div>
+      <select onchange="setFormMateria(this.value)" style="width:100%;padding:13px 14px;border-radius:12px;background:#fff;border:3px solid #E0E0E0;color:#111;font-size:15px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">
+        ${MATERIAS.map(m=>`<option value="${m}" ${form.materia===m?"selected":""}>${m}</option>`).join("")}
+      </select>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:13px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:8px">TÍTULO / TEMA</div>
+      <input id="form-titulo" value="${form.titulo}" oninput="setFormTitulo(this.value)" placeholder="Ej: Parcial de álgebra, TP Revolución Francesa..."
+        style="width:100%;padding:13px 14px;border-radius:12px;background:#fff;border:3px solid ${form.titulo?B.green:"#E0E0E0"};color:#111;font-size:15px;font-family:'Nunito',sans-serif;font-weight:700;transition:border 0.2s"/>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:13px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:8px">FECHA 📅</div>
+      <input type="date" id="form-fecha" value="${form.fecha}" min="${todayStr}" oninput="setFormFecha(this.value)"
+        style="width:100%;padding:13px 14px;border-radius:12px;background:#fff;border:3px solid ${form.fecha?B.blue:"#E0E0E0"};color:#111;font-size:15px;font-family:'Nunito',sans-serif;font-weight:700;transition:border 0.2s"/>
+      ${urgHTML}
+    </div>
+    <div style="margin-bottom:22px">
+      <div style="font-size:13px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:8px">NOTAS <span style="font-weight:700;color:#AAA">(opcional)</span></div>
+      <textarea oninput="setFormDesc(this.value)" placeholder="Temas, capítulos, materiales que necesitás..." rows="3"
+        style="width:100%;padding:13px 14px;border-radius:12px;background:#fff;border:3px solid #E0E0E0;color:#111;font-size:14px;font-family:'Nunito',sans-serif;font-weight:700;resize:none;line-height:1.6">${form.descripcion}</textarea>
+    </div>
+    <button class="press" onclick="saveTask()" ${!form.titulo||!form.fecha?"disabled":""}
+      style="width:100%;padding:16px;border-radius:16px;cursor:${form.titulo&&form.fecha?"pointer":"not-allowed"};background:${form.titulo&&form.fecha?B.blue:"#CCC"};color:#fff;font-family:'Fredoka One',sans-serif;font-size:20px;border:none;box-shadow:${form.titulo&&form.fecha?`0 5px 20px ${B.blue}55`:"none"};transition:all 0.2s">
+      Guardar actividad 🚀
+    </button>
+    <div style="font-size:12px;color:#AAA;text-align:center;margin-top:10px;font-family:'Nunito',sans-serif;font-weight:700">Tus datos se guardan en la nube ☁️</div>
+  `;
+}
+
+// ── NAVEGACIÓN ────────────────────────────────────────────
+function setScreen(s){
+  currentScreen=s;
+  ["resumen","agenda","nueva"].forEach(id=>{
+    document.getElementById("page-"+id).style.display=id===s?"block":"none";
+  });
+  const color=MONTH_COLORS[calMonth];
+  document.querySelectorAll("[data-screen]").forEach(btn=>{
+    const active=btn.dataset.screen===s;
+    btn.style.background=active?"#F4F4F0":"transparent";
+    btn.style.color=active?color:"#111";
+    btn.style.borderBottom=active?`4px solid ${color}`:"4px solid transparent";
+  });
+}
+
+function clickDay(day){selDay=selDay===day?null:day;renderAgenda()}
+function prevMonth(){if(calMonth===0){calMonth=11;calYear--}else calMonth--;selDay=null;renderAgenda();renderHeader()}
+function nextMonth(){if(calMonth===11){calMonth=0;calYear++}else calMonth++;selDay=null;renderAgenda();renderHeader()}
+
+function setFormTipo(v){form.tipo=v;renderNueva()}
+function setFormMateria(v){form.materia=v}
+function setFormTitulo(v){form.titulo=v;document.getElementById("form-titulo").style.borderColor=v?B.green:"#E0E0E0"}
+function setFormFecha(v){form.fecha=v;renderNueva()}
+function setFormDesc(v){form.descripcion=v}
+
+// ── ELIMINAR ──────────────────────────────────────────────
+function openDel(id){delId=id;const m=document.getElementById("modal-del");m.style.display="flex"}
+function cancelDel(){delId=null;document.getElementById("modal-del").style.display="none"}
+async function confirmDel(){await deleteTask(delId);cancelDel()}
+
+// ── NOTIFICACIONES ────────────────────────────────────────
+function loadNotifCfg(){
+  if(!window._user)return;
+  try{const s=JSON.parse(localStorage.getItem(`notif_${window._user.uid}`)||"{}");notif={...DEFAULT_NOTIF,...s};}catch{}
+  renderCfg();startNotifTimer();
+}
+function saveNotifCfg(){if(window._user)localStorage.setItem(`notif_${window._user.uid}`,JSON.stringify(notif))}
+
+function toggleCfg(){
+  cfgOpen=!cfgOpen;
+  const p=document.getElementById("cfg-panel");
+  p.style.display=cfgOpen?"flex":"none";
+  if(cfgOpen)renderCfg();
+}
+
+function renderCfg(){
+  const permColor=notif.permiso==="granted"?B.green:notif.permiso==="denied"?B.red:B.orange;
+  const permLabel=notif.permiso==="granted"?"Activadas ✅":notif.permiso==="denied"?"Bloqueadas ❌":"Sin permiso ⚠️";
+  document.getElementById("cfg-permiso").innerHTML=`
+    <div style="width:12px;height:12px;border-radius:50%;background:${permColor};flex-shrink:0"></div>
+    <div style="flex:1">
+      <div style="font-family:'Fredoka One',sans-serif;font-size:15px;color:#111">Estado del navegador</div>
+      <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;color:${permColor}">${permLabel}</div>
+    </div>
+    ${notif.permiso!=="granted"?`<button class="press" onclick="requestPermission()" style="background:${B.blue};border:none;border-radius:10px;padding:8px 14px;color:#fff;font-family:'Fredoka One',sans-serif;font-size:13px;cursor:pointer">Activar</button>`:""}`;
+  const tog=document.getElementById("notif-toggle");
+  tog.style.background=notif.enabled?B.green:"#CCC";
+  document.getElementById("notif-thumb").style.left=notif.enabled?"27px":"3px";
+  document.getElementById("cfg-toggle-sub").textContent=notif.enabled?"Vas a recibir recordatorios":"Los avisos están apagados";
+  document.getElementById("cfg-extras").style.display=notif.enabled?"block":"none";
+  document.getElementById("notif-hora").value=notif.hora;
+  const dias=[0,1,2,3,5,7];const labels={0:"El día",1:"1 día",2:"2 días",3:"3 días",5:"5 días",7:"1 semana"};
+  document.getElementById("chips-dias").innerHTML=dias.map(d=>{
+    const sel=notif.diasAntes.includes(d);
+    return `<button class="chip press" onclick="toggleDia(${d})" style="background:${sel?B.blue:"#fff"};color:${sel?"#fff":"#111"};border:3px solid ${sel?B.blue:"#DDD"};box-shadow:${sel?`0 3px 10px ${B.blue}44`:"none"}">${labels[d]}</button>`;
+  }).join("");
+  const c1=document.getElementById("chip-1vez"),c2=document.getElementById("chip-2vez");
+  if(c1){c1.style.background=notif.vecesAlDia===1?B.orange:"#fff";c1.style.color=notif.vecesAlDia===1?"#fff":"#111";c1.style.borderColor=notif.vecesAlDia===1?B.orange:"#DDD";}
+  if(c2){c2.style.background=notif.vecesAlDia===2?B.orange:"#fff";c2.style.color=notif.vecesAlDia===2?"#fff":"#111";c2.style.borderColor=notif.vecesAlDia===2?B.orange:"#DDD";}
+  const d2=document.getElementById("cfg-2do-aviso");
+  if(d2){if(notif.vecesAlDia===2){const[h,m]=notif.hora.split(":").map(Number);d2.textContent=`2do aviso: ${String((h+8)%24).padStart(2,"0")}:${String(m).padStart(2,"0")} (8hs después)`;d2.style.display="block";}else{d2.style.display="none";}}
+}
+
+function toggleNotif(){notif.enabled=!notif.enabled;saveNotifCfg();renderCfg();renderHeader();startNotifTimer()}
+function toggleDia(d){notif.diasAntes=notif.diasAntes.includes(d)?notif.diasAntes.filter(x=>x!==d):[...notif.diasAntes,d].sort((a,b)=>a-b);saveNotifCfg();renderCfg()}
+function setNotifHora(v){notif.hora=v;saveNotifCfg();renderCfg()}
+function setVeces(v){notif.vecesAlDia=v;saveNotifCfg();renderCfg()}
+function saveCfg(){saveNotifCfg();const b=document.getElementById("btn-guardar-cfg");b.textContent="✅ ¡Guardado!";b.style.background=B.green;setTimeout(()=>{b.textContent="Guardar ✓";b.style.background=B.blue;toggleCfg();},1200)}
+
+async function requestPermission(){
+  if(!("Notification" in window)){showToast("Tu navegador no soporta notificaciones",B.orange);return}
+  const r=await Notification.requestPermission();
+  notif.permiso=r;if(r==="granted")notif.enabled=true;
+  saveNotifCfg();renderCfg();renderHeader();
+  if(r==="granted")showToast("✅ Notificaciones activadas!",B.green);
+  else showToast("❌ Permiso denegado",B.red);
+}
+
+function testNotif(){
+  const msg='⏳ En 3 días: Examen de Historia: "Revolución Francesa"';
+  if(notif.permiso==="granted"&&"Notification" in window)new Notification("⏳ MiAgenda",{body:msg});
+  showToast(msg,B.orange);
+}
+
+function startNotifTimer(){
+  if(notifTimer)clearInterval(notifTimer);
+  if(!notif.enabled)return;
+  notifTimer=setInterval(()=>{
+    const now=new Date();
+    const hhmm=`${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+    const times=[notif.hora];
+    if(notif.vecesAlDia===2){const[h,m]=notif.hora.split(":").map(Number);times.push(`${String((h+8)%24).padStart(2,"0")}:${String(m).padStart(2,"0")}`)}
+    if(!times.includes(hhmm))return;
+    const key=hhmm+"-"+todayStr;
+    if(localStorage.getItem("last_notif")===key)return;
+    localStorage.setItem("last_notif",key);
+    tasks.map(t=>({...t,dl:getDaysLeft(t.fecha)})).filter(t=>t.dl>=0&&notif.diasAntes.includes(t.dl)).forEach(t=>{
+      const urg=getUrgency(t.dl);const tipo=getTipo(t.tipo);
+      const lbl=tipo.label.split(" ").slice(1).join(" ");
+      const msg=t.dl===0?`🔴 ¡HOY! ${lbl} de ${t.materia}: "${t.titulo}"`:t.dl===1?`🟠 Mañana: ${lbl} de ${t.materia}: "${t.titulo}"`:(`⏳ En ${t.dl} días: ${lbl} de ${t.materia}: "${t.titulo}"`);
+      if(notif.permiso==="granted"&&"Notification" in window)new Notification("⏳ MiAgenda",{body:msg});
+      showToast(msg,urg.dot);
+    });
+  },60000);
+}
+
+// ── TOAST ─────────────────────────────────────────────────
+function showToast(msg,color=B.blue){
+  const id=Date.now();
+  const el=document.createElement("div");
+  el.className="toast-anim";
+  el.style.cssText=`background:#fff;border-radius:12px;padding:11px 14px;border-left:5px solid ${color};box-shadow:0 4px 20px rgba(0,0,0,0.18);font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;color:#111;line-height:1.4`;
+  el.textContent=msg;
+  document.getElementById("toast-container").appendChild(el);
+  setTimeout(()=>el.remove(),4000);
+}
+
+// ── LOGIN ENTER ───────────────────────────────────────────
+document.getElementById("login-pass").addEventListener("keydown",e=>{if(e.key==="Enter")doAuth()});
+</script>
+</body>
 </html>
