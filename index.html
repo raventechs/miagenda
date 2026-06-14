@@ -4,667 +4,716 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>MiAgenda</title>
-<meta name="theme-color" content="#0057A8"/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#F4F4F0;font-family:'Fredoka One',sans-serif;color:#111}
-input,select,textarea{outline:none;border:none;font-family:inherit}
-select option{font-family:Arial,sans-serif}
-@keyframes sand{0%{transform:rotate(0deg)}48%{transform:rotate(0deg)}50%{transform:rotate(180deg)}98%{transform:rotate(180deg)}100%{transform:rotate(360deg)}}
-@keyframes up{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
-@keyframes pop{0%{transform:scale(0.75);opacity:0}65%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0.35}}
-@keyframes toastIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
-.hourglass{display:inline-block;animation:sand 3s ease-in-out infinite}
-.up{animation:up 0.28s ease forwards}
-.pop{animation:pop 0.32s ease forwards}
-.blink{animation:blink 1.1s ease-in-out infinite}
-.toast-anim{animation:toastIn 0.35s ease forwards}
-.press:active{transform:scale(0.94)}
-.card:active{transform:scale(0.985)}
-.cal-cell:hover{opacity:0.8}
-.toggle-track{position:relative;width:52px;height:28px;border-radius:14px;cursor:pointer;transition:background 0.25s;border:none}
-.toggle-thumb{position:absolute;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);transition:left 0.25s}
-.chip{display:inline-flex;align-items:center;justify-content:center;border-radius:20px;padding:7px 14px;cursor:pointer;font-family:'Fredoka One',sans-serif;font-size:15px;transition:all 0.18s;border:3px solid transparent}
-.chip:active{transform:scale(0.93)}
+:root{
+  --navy:#0f1e3d;--navy3:#1e2f55;
+  --blue:#1d4ed8;--blue-dark:#1338a0;
+  --gold:#f0b84a;--gold2:#c49020;
+  --green:#16a34a;--green-bg:#dcfce7;
+  --warn:#d97706;--warn-bg:#fef3c7;
+  --red:#dc2626;--red-bg:#fee2e2;
+  --bg:#eef0f6;--surface:#ffffff;--surface2:#f4f6fb;
+  --border:#dde1ec;--text:#0f1e3d;--muted:#6b7a99;
+  --shadow:0 2px 8px rgba(15,30,61,.08);
+  --shadow-md:0 4px 20px rgba(15,30,61,.12);
+  --font:'Inter',sans-serif;--radius:12px;--radius-sm:8px;
+}
+[data-theme="dark"]{
+  --bg:#0f172a;--surface:#1e293b;--surface2:#0f172a;
+  --border:#334155;--text:#f1f5f9;--muted:#94a3b8;
+  --shadow:0 2px 8px rgba(0,0,0,.3);--shadow-md:0 4px 20px rgba(0,0,0,.4);
+  --green-bg:#052e16;--warn-bg:#1c1000;--red-bg:#3f0f0f;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;transition:background .2s,color .2s}
+input,select,button,textarea{font-family:var(--font)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ══ SCREENS ══════════════════════════════════════════════ */
+.screen{display:none;min-height:100vh;flex-direction:column}
+.screen.active{display:flex}
+#screen-login.active{align-items:center;justify-content:center;background:linear-gradient(145deg,var(--navy) 0%,#1a3060 100%);padding:24px}
+#screen-admin.active{flex-direction:column;background:var(--bg)}
+
+/* ══ AUTH ══════════════════════════════════════════════════ */
+.auth-card{background:var(--surface);border-radius:20px;padding:40px 36px;width:100%;max-width:380px;box-shadow:0 32px 80px rgba(0,0,0,.3);animation:fadeUp .4s ease both}
+.brand-row{display:flex;align-items:center;gap:12px;margin-bottom:32px}
+.brand-icon{width:44px;height:44px;background:var(--navy);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;user-select:none;flex-shrink:0}
+.brand-name{font-size:22px;font-weight:800;color:var(--navy)}
+.brand-name span{color:var(--gold)}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--surface2);border-radius:var(--radius-sm);padding:4px;margin-bottom:24px}
+.auth-tab{padding:10px;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:var(--muted)}
+.auth-tab.active{background:var(--navy);color:#fff;box-shadow:0 2px 8px rgba(15,30,61,.2)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;color:var(--text);font-size:15px;outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue)}
+.field input::placeholder,.field textarea::placeholder{color:var(--muted)}
+.btn-primary{width:100%;padding:14px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 0 var(--navy3);transition:transform .1s,box-shadow .1s;margin-top:6px}
+.btn-primary:active{transform:translateY(2px);box-shadow:0 2px 0 var(--navy3)}
+.btn-primary:disabled{opacity:.5;cursor:default}
+.auth-err{background:var(--red-bg);color:var(--red);border:1px solid #fca5a5;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;margin-bottom:14px;display:none}
+.auth-err.show{display:block}
+
+/* ══ APP HEADER ════════════════════════════════════════════ */
+.app-header{background:var(--navy);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;transition:background .2s}
+[data-theme="dark"] .app-header{background:#080f1e}
+.app-header-brand{font-size:20px;font-weight:800;color:#fff;cursor:pointer;user-select:none}
+.app-header-brand span{color:var(--gold)}
+.app-header-right{display:flex;align-items:center;gap:8px}
+.icon-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;width:36px;height:36px;border-radius:var(--radius-sm);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.icon-btn:hover{background:rgba(255,255,255,.25)}
+.header-count{background:var(--gold);color:var(--navy);font-size:12px;font-weight:800;padding:4px 10px;border-radius:99px}
+.header-saludo{font-size:12px;color:rgba(255,255,255,.6);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ══ NAV ════════════════════════════════════════════════════ */
+.app-nav{background:var(--surface);border-bottom:2px solid var(--border);display:flex;position:sticky;top:58px;z-index:99;transition:background .2s}
+.nav-btn{flex:1;padding:12px 4px;border:none;background:none;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s}
+.nav-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+/* ══ MAIN ════════════════════════════════════════════════════ */
+.app-body{flex:1;overflow-y:auto;padding-bottom:20px}
+.page{padding:16px;animation:fadeUp .3s ease both;display:none}
+.page.active{display:block}
+
+/* ══ CARDS ══════════════════════════════════════════════════ */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sec-title{font-size:15px;font-weight:700;color:var(--text)}
+.btn-sm{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--text);cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-sm:hover{background:var(--surface2);border-color:var(--blue)}
+.btn-sm.gold{background:var(--gold);color:var(--navy);border-color:var(--gold);box-shadow:0 3px 0 var(--gold2)}
+.btn-sm.danger{background:var(--red-bg);color:var(--red);border-color:#fca5a5}
+
+/* ══ TAREA CARD ══════════════════════════════════════════════ */
+.tarea-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;box-shadow:var(--shadow);overflow:hidden}
+.tarea-bar{height:5px}
+.tarea-body{padding:14px 16px}
+.tarea-top{display:flex;align-items:flex-start;gap:10px}
+.tarea-info{flex:1}
+.tarea-titulo{font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px}
+.tarea-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.tarea-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px}
+.tarea-fecha{font-size:12px;color:var(--muted)}
+.tarea-desc{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.5}
+.urgencia-badge{flex-shrink:0;border-radius:10px;padding:8px 10px;text-align:center;min-width:56px}
+.urgencia-num{font-size:20px;font-weight:800;line-height:1}
+.urgencia-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.blink{animation:blink 1s ease-in-out infinite}
+
+/* ══ TIPOS ═══════════════════════════════════════════════════ */
+.tipos-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.tipo-btn{padding:12px 8px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;border:2px solid var(--border);background:var(--surface2);color:var(--muted);text-align:center}
+.tipo-btn.active{border-color:var(--blue);background:#eff6ff;color:var(--blue)}
+[data-theme="dark"] .tipo-btn.active{background:#1e3a5f}
+
+/* ══ CALENDARIO ══════════════════════════════════════════════ */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-month{font-size:16px;font-weight:700;color:var(--text)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-day-header{text-align:center;font-size:11px;font-weight:700;color:var(--muted);padding:4px 0}
+.cal-day{min-height:44px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border);padding:4px;cursor:pointer;transition:background .15s;position:relative}
+.cal-day:hover{background:var(--border)}
+.cal-day.today{border-color:var(--blue);background:#eff6ff}
+[data-theme="dark"] .cal-day.today{background:#1e3a5f}
+.cal-day.selected{background:var(--navy);border-color:var(--navy)}
+[data-theme="dark"] .cal-day.selected{background:var(--blue);border-color:var(--blue)}
+.cal-day.other-month{opacity:.3}
+.cal-day-num{font-size:12px;font-weight:600;color:var(--text)}
+.cal-day.selected .cal-day-num{color:#fff}
+.cal-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);position:absolute;bottom:4px;right:4px}
+.cal-day.selected .cal-dot{background:#fff}
+
+/* ══ LEYENDA ═════════════════════════════════════════════════ */
+.leyenda{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.leyenda-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.leyenda-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* ══ FORM ════════════════════════════════════════════════════ */
+.urgencia-preview{display:inline-block;margin-top:6px;padding:4px 14px;border-radius:99px;font-size:13px;font-weight:700}
+
+/* ══ ADMIN ═══════════════════════════════════════════════════ */
+.admin-header{background:#7c3aed;padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
+.admin-header-title{font-size:18px;font-weight:800;color:#fff}
+.admin-badge{background:rgba(255,255,255,.2);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:10px}
+.btn-admin-exit{background:none;border:2px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font)}
+.admin-tabs{background:#6d28d9;display:flex}
+.admin-tab{flex:1;padding:12px 4px;text-align:center;font-size:12px;font-weight:600;color:rgba(255,255,255,.6);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s}
+.admin-tab.active{color:#fff;border-bottom-color:var(--gold)}
+.admin-body{flex:1;overflow-y:auto;padding:16px;background:var(--bg)}
+.admin-section-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px}
+.admin-card{background:var(--surface);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.admin-card-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px}
+.admin-card-sub{font-size:12px;color:var(--muted);margin-bottom:10px}
+.admin-card-actions{display:flex;gap:8px}
+.btn-adel{flex:1;padding:8px;background:var(--red-bg);border:1.5px solid #fecaca;border-radius:8px;color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.btn-aban{flex:1;padding:8px;background:var(--red-bg);border:1.5px solid #fecaca;border-radius:8px;color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.btn-aunban{flex:1;padding:8px;background:var(--green-bg);border:1.5px solid #86efac;border-radius:8px;color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.ban-badge{font-size:10px;font-weight:700;background:var(--red);color:#fff;padding:2px 6px;border-radius:6px;margin-left:6px}
+
+/* ══ PIN ════════════════════════════════════════════════════ */
+.pin-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;z-index:9999}
+.pin-overlay.open{display:flex}
+@media(min-width:600px){.pin-overlay{align-items:center}}
+.pin-modal{background:var(--surface);border-radius:20px 20px 0 0;padding:28px 24px 40px;width:100%;max-width:360px}
+@media(min-width:600px){.pin-modal{border-radius:20px}}
+.pin-modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.pin-modal-title{font-size:17px;font-weight:800;color:var(--text)}
+.pin-close-btn{width:32px;height:32px;background:var(--surface2);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--muted);border:none}
+.pin-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:16px}
+.pin-dots{display:flex;gap:10px;justify-content:center;margin-bottom:20px}
+.pin-dot{width:16px;height:16px;border-radius:50%;background:var(--border);transition:background .2s}
+.pin-dot.filled{background:var(--blue)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pin-btn{padding:16px;background:var(--surface2);border:2px solid var(--border);border-radius:12px;font-size:20px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--font);transition:all .2s}
+.pin-btn:active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.pin-err{color:var(--red);font-size:13px;font-weight:600;text-align:center;margin-top:10px;display:none}
+
+/* ══ MODAL ══════════════════════════════════════════════════ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:500;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:20px;padding:28px 24px;width:100%;max-width:320px;box-shadow:var(--shadow-md)}
+.modal-title{font-size:17px;font-weight:800;color:var(--text);text-align:center;margin-bottom:8px}
+.modal-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:20px}
+.modal-footer{display:flex;gap:10px}
+.btn-cancel{flex:1;padding:12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-weight:600;color:var(--muted);cursor:pointer}
+.btn-del-confirm{flex:1;padding:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer}
+
+/* ══ EMPTY / LOADING ════════════════════════════════════════ */
+.empty{text-align:center;padding:48px 24px;color:var(--muted)}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.empty-msg{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
+.empty-sub{font-size:14px}
+.loading-wrap{display:flex;justify-content:center;padding:40px}
+.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+
+/* ══ TOAST ══════════════════════════════════════════════════ */
+#toast-wrap{position:fixed;bottom:24px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:9998}
+.toast{background:var(--navy);color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:var(--shadow-md);animation:fadeUp .3s ease both}
+[data-theme="dark"] .toast{background:#1e293b;border:1px solid var(--border)}
+.toast.ok{background:var(--green)}
+.toast.err{background:var(--red)}
+.toast.warn{background:var(--warn)}
 </style>
 </head>
 <body>
 
 <!-- LOGIN -->
-<div id="login-screen" style="min-height:100vh;background:#F4F4F0;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div class="up" id="login-box" style="background:#fff;border-radius:24px;padding:32px 28px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.12)">
-    <div style="text-align:center;margin-bottom:24px">
-      <div style="font-size:52px"><span class="hourglass">⏳</span></div>
-      <div style="font-size:30px;color:#0057A8;letter-spacing:1px;margin-top:4px">MiAgenda</div>
-      <div id="login-subtitle" style="font-size:14px;color:#888;font-family:'Nunito',sans-serif;font-weight:800;margin-top:4px">Iniciá sesión para continuar</div>
+<div id="screen-login" class="screen active">
+  <div class="auth-card">
+    <div class="brand-row">
+      <div class="brand-icon" id="login-logo">📅</div>
+      <div class="brand-name">Mi<span>Agenda</span></div>
     </div>
-    <div style="display:flex;background:#F4F4F0;border-radius:14px;padding:4px;margin-bottom:22px">
-      <button id="tab-login" class="press" onclick="setModo('login')"
-        style="flex:1;padding:10px 0;border-radius:11px;border:none;cursor:pointer;font-family:'Fredoka One',sans-serif;font-size:15px;background:#0057A8;color:#fff;transition:all 0.18s">
-        Ingresar
-      </button>
-      <button id="tab-registro" class="press" onclick="setModo('registro')"
-        style="flex:1;padding:10px 0;border-radius:11px;border:none;cursor:pointer;font-family:'Fredoka One',sans-serif;font-size:15px;background:transparent;color:#888;transition:all 0.18s">
-        Registrarme
-      </button>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login">Ingresar</button>
+      <button class="auth-tab" id="tab-registro">Registrarse</button>
     </div>
-    <div id="campo-nombre" style="margin-bottom:14px;display:none">
-      <div style="font-size:12px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:6px">TU NOMBRE</div>
-      <input id="login-nombre" placeholder="Ej: Lucía Martínez"
-        style="width:100%;padding:13px 14px;border-radius:12px;background:#F4F4F0;border:3px solid #E0E0E0;color:#111;font-size:15px;font-family:'Nunito',sans-serif;font-weight:700;transition:border 0.2s"/>
-    </div>
-    <div style="margin-bottom:14px">
-      <div style="font-size:12px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:6px">EMAIL</div>
-      <input id="login-email" type="email" placeholder="tucorreo@gmail.com"
-        style="width:100%;padding:13px 14px;border-radius:12px;background:#F4F4F0;border:3px solid #E0E0E0;color:#111;font-size:15px;font-family:'Nunito',sans-serif;font-weight:700;transition:border 0.2s"/>
-    </div>
-    <div style="margin-bottom:22px">
-      <div style="font-size:12px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:6px">CONTRASEÑA</div>
-      <input id="login-pass" type="password" placeholder="Tu contraseña"
-        style="width:100%;padding:13px 14px;border-radius:12px;background:#F4F4F0;border:3px solid #E0E0E0;color:#111;font-size:15px;font-family:'Nunito',sans-serif;font-weight:700;transition:border 0.2s"/>
-    </div>
-    <div id="login-error" style="background:#FFE8EB;border:2px solid #E8001D;border-radius:10px;padding:10px 14px;margin-bottom:16px;color:#E8001D;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;display:none"></div>
-    <button id="btn-login" class="press" onclick="doAuth()"
-      style="width:100%;padding:16px;border-radius:16px;border:none;cursor:pointer;background:#0057A8;color:#fff;font-family:'Fredoka One',sans-serif;font-size:20px;letter-spacing:0.5px;box-shadow:0 5px 20px #0057A855;transition:all 0.2s">
-      Ingresar 🚀
-    </button>
+    <div class="field" id="field-nombre" style="display:none"><label>Tu nombre</label><input id="f-nombre" placeholder="Lucía Martínez"/></div>
+    <div class="auth-err" id="auth-err"></div>
+    <div class="field"><label>Email</label><input id="f-email" type="email" placeholder="tu@email.com"/></div>
+    <div class="field"><label>Contraseña</label><input id="f-pass" type="password" placeholder="••••••••"/></div>
+    <button class="btn-primary" id="btn-auth">Ingresar →</button>
   </div>
 </div>
 
 <!-- APP -->
-<div id="app-screen" style="display:none;min-height:100vh;background:#F4F4F0;max-width:480px;margin:0 auto;position:relative;padding-bottom:80px">
-
-  <!-- TOASTS -->
-  <div id="toast-container" style="position:fixed;top:12px;right:12px;z-index:999;display:flex;flex-direction:column;gap:8px;max-width:300px"></div>
-
-  <!-- HEADER -->
-  <div id="app-header" style="padding:18px 18px 14px;position:relative;overflow:hidden">
-    <div style="position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.15)"></div>
-    <div style="position:absolute;right:30px;bottom:-40px;width:90px;height:90px;border-radius:50%;background:rgba(0,0,0,0.08)"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;position:relative">
-      <div>
-        <div style="font-size:28px;color:#fff;letter-spacing:1px;text-shadow:2px 2px 0 rgba(0,0,0,0.15)">
-          <span class="hourglass">⏳</span> MiAgenda
-        </div>
-        <div id="header-saludo" style="font-size:13px;color:#fff;margin-top:2px;font-family:'Nunito',sans-serif;font-weight:900"></div>
-        <div id="header-fecha" style="font-size:12px;color:rgba(255,255,255,0.85);font-family:'Nunito',sans-serif;font-weight:800"></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <button class="press" onclick="toggleCfg()" id="btn-cfg"
-          style="background:rgba(255,255,255,0.25);border:2px solid rgba(255,255,255,0.5);border-radius:12px;width:40px;height:40px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative">
-          ⚙️
-          <div id="notif-dot" style="display:none;position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:#00A651;border:2px solid #0057A8"></div>
-        </button>
-        <button class="press" onclick="doLogout()"
-          style="background:rgba(255,255,255,0.25);border:2px solid rgba(255,255,255,0.5);border-radius:12px;width:40px;height:40px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">
-          🚪
-        </button>
-        <div style="background:rgba(255,255,255,0.25);border-radius:14px;padding:6px 14px;border:2px solid rgba(255,255,255,0.5);text-align:center">
-          <span id="header-count" style="color:#fff;font-family:'Fredoka One',sans-serif;font-size:24px;display:block;line-height:1">0</span>
-          <span style="color:rgba(255,255,255,0.9);font-size:11px;font-family:'Nunito',sans-serif;font-weight:800">próximas</span>
-        </div>
-      </div>
+<div id="screen-app" class="screen">
+  <div class="app-header">
+    <div class="app-header-brand" id="app-logo">Mi<span>Agenda</span></div>
+    <div class="app-header-right">
+      <span class="header-saludo" id="header-saludo"></span>
+      <span class="header-count" id="header-count">0 próximas</span>
+      <button class="icon-btn" id="btn-theme">🌙</button>
+      <button class="icon-btn" id="btn-logout">⏻</button>
     </div>
   </div>
-
-  <!-- NAV -->
-  <div id="app-nav" style="display:flex;background:#fff;border-bottom:3px solid #F4F4F0;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
-    <button class="press" onclick="setScreen('resumen')" data-screen="resumen"
-      style="flex:1;padding:11px 0;background:#F4F4F0;border:none;border-bottom:4px solid #0057A8;color:#0057A8;font-family:'Fredoka One',sans-serif;font-size:13px;cursor:pointer;transition:all 0.18s;letter-spacing:0.5px">
-      📋 Resumen
-    </button>
-    <button class="press" onclick="setScreen('agenda')" data-screen="agenda"
-      style="flex:1;padding:11px 0;background:transparent;border:none;border-bottom:4px solid transparent;color:#111;font-family:'Fredoka One',sans-serif;font-size:13px;cursor:pointer;transition:all 0.18s;letter-spacing:0.5px">
-      🗓️ Agenda
-    </button>
-    <button class="press" onclick="setScreen('nueva')" data-screen="nueva"
-      style="flex:1;padding:11px 0;background:transparent;border:none;border-bottom:4px solid transparent;color:#111;font-family:'Fredoka One',sans-serif;font-size:13px;cursor:pointer;transition:all 0.18s;letter-spacing:0.5px">
-      ➕ Nueva
-    </button>
+  <nav class="app-nav">
+    <button class="nav-btn active" data-page="resumen">📋 Resumen</button>
+    <button class="nav-btn" data-page="agenda">🗓️ Agenda</button>
+    <button class="nav-btn" data-page="nueva">➕ Nueva</button>
+  </nav>
+  <div class="app-body">
+    <div id="page-resumen" class="page active"></div>
+    <div id="page-agenda" class="page"></div>
+    <div id="page-nueva" class="page"></div>
   </div>
-
-  <!-- PÁGINAS -->
-  <div id="page-resumen" style="padding:14px 12px" class="up"></div>
-  <div id="page-agenda" style="padding:14px 12px;display:none" class="up"></div>
-  <div id="page-nueva" style="padding:14px 12px;display:none" class="up"></div>
-
-  <!-- PANEL NOTIFICACIONES -->
-  <div id="cfg-panel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:flex-end;justify-content:center;z-index:200">
-    <div style="background:#fff;border-radius:24px 24px 0 0;padding:22px 20px 32px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,0.25)" class="pop">
-      <div style="width:40px;height:4px;border-radius:2px;background:#DDD;margin:0 auto 18px"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-        <div style="font-family:'Fredoka One',sans-serif;font-size:22px;color:#111">🔔 Notificaciones</div>
-        <button class="press" onclick="toggleCfg()" style="background:#F0F0F0;border:none;border-radius:10px;width:34px;height:34px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
-      </div>
-      <div id="cfg-permiso" style="background:#F8F8F8;border-radius:14px;padding:12px 14px;margin-bottom:18px;border:2px solid #E8E8E8;display:flex;align-items:center;gap:12px"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between;background:#F8F8F8;border-radius:14px;padding:14px 16px;margin-bottom:18px;border:2px solid #E8E8E8">
-        <div>
-          <div style="font-family:'Fredoka One',sans-serif;font-size:17px;color:#111">Avisos activados</div>
-          <div id="cfg-toggle-sub" style="font-family:'Nunito',sans-serif;font-weight:800;font-size:12px;color:#888;margin-top:2px">Los avisos están apagados</div>
-        </div>
-        <button id="notif-toggle" class="toggle-track press" onclick="toggleNotif()" style="background:#CCC">
-          <div id="notif-thumb" class="toggle-thumb" style="left:3px"></div>
-        </button>
-      </div>
-      <div id="cfg-extras" style="display:none">
-        <div style="margin-bottom:18px">
-          <div style="font-family:'Fredoka One',sans-serif;font-size:16px;color:#111;margin-bottom:4px">¿Cuántos días antes?</div>
-          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:12px;color:#888;margin-bottom:10px">Podés elegir más de uno</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap" id="chips-dias"></div>
-        </div>
-        <div style="margin-bottom:18px">
-          <div style="font-family:'Fredoka One',sans-serif;font-size:16px;color:#111;margin-bottom:10px">🕐 Horario del aviso</div>
-          <input type="time" id="notif-hora" onchange="setNotifHora(this.value)"
-            style="width:100%;padding:13px 14px;border-radius:12px;background:#fff;border:3px solid #0057A8;color:#111;font-size:18px;font-family:'Fredoka One',sans-serif"/>
-        </div>
-        <div style="margin-bottom:22px">
-          <div style="font-family:'Fredoka One',sans-serif;font-size:16px;color:#111;margin-bottom:4px">¿Cuántas veces por día?</div>
-          <div id="cfg-2do-aviso" style="font-family:'Nunito',sans-serif;font-weight:800;font-size:12px;color:#888;margin-bottom:10px;display:none"></div>
-          <div style="display:flex;gap:10px">
-            <button class="chip press" id="chip-1vez" onclick="setVeces(1)"
-              style="flex:1;background:#FF6600;color:#fff;border:3px solid #FF6600;box-shadow:0 3px 10px #FF660044;padding:10px 0;font-size:15px">1 vez por día</button>
-            <button class="chip press" id="chip-2vez" onclick="setVeces(2)"
-              style="flex:1;background:#fff;color:#111;border:3px solid #DDD;padding:10px 0;font-size:15px">2 veces por día</button>
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;gap:10px">
-        <button class="press" onclick="testNotif()"
-          style="flex:1;padding:13px;border-radius:14px;background:#F0F0F0;border:3px solid #DDD;color:#111;font-family:'Fredoka One',sans-serif;font-size:15px;cursor:pointer">
-          🧪 Probar aviso
-        </button>
-        <button class="press" id="btn-guardar-cfg" onclick="saveCfg()"
-          style="flex:1;padding:13px;border-radius:14px;background:#0057A8;border:none;color:#fff;font-family:'Fredoka One',sans-serif;font-size:15px;cursor:pointer;box-shadow:0 4px 14px #0057A855">
-          Guardar ✓
-        </button>
-      </div>
-      <div style="font-size:12px;color:#AAA;text-align:center;margin-top:12px;font-family:'Nunito',sans-serif;font-weight:700;line-height:1.5">
-        Los avisos funcionan cuando la app está abierta.
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL ELIMINAR -->
-  <div id="modal-del" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;z-index:100;padding:20px">
-    <div style="background:#fff;border-radius:22px;padding:26px;width:100%;max-width:300px;border:4px solid #E8001D;box-shadow:0 8px 40px rgba(0,0,0,0.25)" class="pop">
-      <div style="font-size:42px;text-align:center;margin-bottom:10px">🗑️</div>
-      <div style="font-family:'Fredoka One',sans-serif;font-size:20px;text-align:center;margin-bottom:6px;color:#111">¿Eliminar actividad?</div>
-      <div style="font-size:14px;color:#888;text-align:center;margin-bottom:20px;font-family:'Nunito',sans-serif;font-weight:800">Esta acción no se puede deshacer</div>
-      <div style="display:flex;gap:10px">
-        <button class="press" onclick="cancelDel()"
-          style="flex:1;padding:13px;border-radius:12px;background:#F0F0F0;border:3px solid #DDD;color:#111;font-family:'Fredoka One',sans-serif;font-size:16px;cursor:pointer">Cancelar</button>
-        <button class="press" onclick="confirmDel()"
-          style="flex:1;padding:13px;border-radius:12px;background:#E8001D;border:3px solid #E8001D;color:#fff;font-family:'Fredoka One',sans-serif;font-size:16px;cursor:pointer;box-shadow:0 4px 14px #E8001D66">Eliminar</button>
-      </div>
-    </div>
-  </div>
-
 </div>
 
-<!-- FIREBASE -->
+<!-- ADMIN -->
+<div id="screen-admin" class="screen">
+  <div class="admin-header">
+    <div class="admin-header-title">⚡ Panel Admin</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="admin-badge">SUPER USUARIO</span>
+      <button class="btn-admin-exit" id="btn-admin-exit">Salir</button>
+    </div>
+  </div>
+  <div class="admin-tabs">
+    <div class="admin-tab active" id="atab-users">👥 Usuarios</div>
+    <div class="admin-tab" id="atab-tareas">📋 Tareas</div>
+  </div>
+  <div class="admin-body">
+    <div id="admin-users-view"><p class="admin-section-title">Todos los usuarios</p><div id="admin-users-list"><div class="loading-wrap"><div class="spinner"></div></div></div></div>
+    <div id="admin-tareas-view" style="display:none"><p class="admin-section-title">Todas las tareas</p><div id="admin-tareas-list"><div class="loading-wrap"><div class="spinner"></div></div></div></div>
+  </div>
+</div>
+
+<!-- MODAL ELIMINAR -->
+<div class="modal-overlay" id="modal-del">
+  <div class="modal">
+    <div style="font-size:40px;text-align:center;margin-bottom:12px">🗑️</div>
+    <div class="modal-title">¿Eliminar actividad?</div>
+    <div class="modal-sub">Esta acción no se puede deshacer</div>
+    <div class="modal-footer">
+      <button class="btn-cancel" id="btn-cancel-del">Cancelar</button>
+      <button class="btn-del-confirm" id="btn-confirm-del">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN -->
+<div class="pin-overlay" id="pin-overlay">
+  <div class="pin-modal">
+    <div class="pin-modal-header"><span class="pin-modal-title">🔐 Acceso admin</span><button class="pin-close-btn" id="btn-pin-close">✕</button></div>
+    <p class="pin-sub">Ingresá el PIN de administrador</p>
+    <div class="pin-dots"><div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div><div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div></div>
+    <div class="pin-pad">
+      <button class="pin-btn" data-n="1">1</button><button class="pin-btn" data-n="2">2</button><button class="pin-btn" data-n="3">3</button>
+      <button class="pin-btn" data-n="4">4</button><button class="pin-btn" data-n="5">5</button><button class="pin-btn" data-n="6">6</button>
+      <button class="pin-btn" data-n="7">7</button><button class="pin-btn" data-n="8">8</button><button class="pin-btn" data-n="9">9</button>
+      <button class="pin-btn" data-n="del">⌫</button><button class="pin-btn" data-n="0">0</button>
+      <button class="pin-btn" data-n="ok" style="background:var(--blue);color:#fff;border-color:var(--blue);font-size:14px">OK</button>
+    </div>
+    <p class="pin-err" id="pin-err">PIN incorrecto</p>
+  </div>
+</div>
+
+<div id="toast-wrap"></div>
+
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc,
-  onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getFirestore,collection,doc,setDoc,deleteDoc,onSnapshot,query,orderBy,serverTimestamp,getDocs}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ⚠️ Reemplazar con los datos reales de Firebase Console → Configuración del proyecto
-const firebaseConfig = {
-  apiKey: "AIzaSyBTy1JKKbz9GpGTaOmT-1lQ4Z3zCqOTZfQ",
-  authDomain: "miagenda-37996.firebaseapp.com",
-  projectId: "miagenda-37996",
-  storageBucket: "miagenda-37996.appspot.com",
-  messagingSenderId: "626485085205",
-  appId: "1:626485085205:web:1be15baf1d7ab62676ba1c"
+// 🔧 FIREBASE CONFIG
+const FB={
+  apiKey:"AIzaSyBTy1JKKbz9GpGTaOmT-1lQ4Z3zCqOTZfQ",
+  authDomain:"miagenda-37996.firebaseapp.com",
+  projectId:"miagenda-37996",
+  storageBucket:"miagenda-37996.appspot.com",
+  messagingSenderId:"626485085205",
+  appId:"1:626485085205:web:1be15baf1d7ab62676ba1c"
 };
+// 🔐 PIN ADMIN
+const ADMIN_PIN="1990";
 
-// ── INIT ──────────────────────────────────────────────────
-const app  = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getFirestore(app);
+const fbApp=initializeApp(FB);
+const auth=getAuth(fbApp);
+const db=getFirestore(fbApp);
 
-window._auth = auth; window._db = db;
-window._setDoc = setDoc; window._deleteDoc = deleteDoc;
-window._doc = doc; window._collection = collection;
-window._query = query; window._orderBy = orderBy;
-window._serverTimestamp = serverTimestamp;
-window._onSnapshot = onSnapshot;
-window._createUser = createUserWithEmailAndPassword;
-window._signIn = signInWithEmailAndPassword;
-window._signOut = signOut;
-window._updateProfile = updateProfile;
-
-onAuthStateChanged(auth, user => {
-  if (user) { window._user = user; onLogin(user); }
-  else { window._user = null; showLoginScreen(); }
-});
-</script>
-
-<script>
 // ── CONSTANTES ────────────────────────────────────────────
-const B = {
-  red:"#E8001D",green:"#00A651",blue:"#0057A8",yellow:"#FFD100",
-  orange:"#FF6600",pink:"#E8006F",teal:"#00A99D",white:"#FFFFFF",black:"#111111",bg:"#F4F4F0"
-};
-const TIPOS = [
-  {id:"examen",    label:"📝 Examen",          color:B.red,    bg:"#FFE8EB"},
-  {id:"trabajo",   label:"📚 Trabajo Práctico", color:B.blue,   bg:"#E0EEFF"},
-  {id:"entrega",   label:"📦 Entrega",          color:B.green,  bg:"#E0F7ED"},
-  {id:"exposicion",label:"🎤 Exposición",       color:B.orange, bg:"#FFF0E0"},
+const TIPOS=[
+  {id:"examen",label:"📝 Examen",color:"#dc2626",bg:"#fee2e2"},
+  {id:"trabajo",label:"📚 Trabajo Práctico",color:"#1d4ed8",bg:"#dbeafe"},
+  {id:"entrega",label:"📦 Entrega",color:"#16a34a",bg:"#dcfce7"},
+  {id:"exposicion",label:"🎤 Exposición",color:"#d97706",bg:"#fef3c7"},
 ];
-const MATERIAS = ["Matemática","Lengua","Historia","Geografía","Biología","Física","Química","Inglés","Ed. Física","Arte","Música","Informática","Filosofía","Economía","Otra"];
-const DAYS_ES   = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
-const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-const MONTH_COLORS = [B.blue,B.teal,B.green,B.green,B.yellow,B.orange,B.red,B.orange,B.pink,B.blue,B.teal,B.red];
-const DEFAULT_NOTIF = {enabled:false,diasAntes:[1,3],hora:"08:00",vecesAlDia:1,permiso:"default"};
+const MATERIAS=["Matemática","Lengua","Historia","Geografía","Biología","Física","Química","Inglés","Ed. Física","Arte","Música","Informática","Filosofía","Economía","Otra"];
+const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const MESES_CORTO=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const DIAS=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 
 // ── ESTADO ────────────────────────────────────────────────
-let tasks=[], currentScreen="resumen", delId=null;
-let calYear=new Date().getFullYear(), calMonth=new Date().getMonth(), selDay=null;
-let notif={...DEFAULT_NOTIF}, notifTimer=null, cfgOpen=false;
+let me=null,tasks=[],unsubTasks=null;
+let currentPage="resumen",delId=null;
+let calYear=new Date().getFullYear(),calMonth=new Date().getMonth(),selDay=null;
 let form={titulo:"",materia:"Matemática",tipo:"examen",fecha:"",descripcion:""};
+let logoTaps=0,logoTimer=null,pinBuf="";
+let isRegister=false;
+const todayStr=new Date().toISOString().split("T")[0];
 
-const today=new Date(); today.setHours(0,0,0,0);
-const todayStr=today.toISOString().split("T")[0];
+// ── TEMA ──────────────────────────────────────────────────
+function initTheme(){applyTheme(localStorage.getItem("ma-theme")||"light");}
+function applyTheme(t){
+  document.documentElement.setAttribute("data-theme",t);
+  const b=document.getElementById("btn-theme");
+  if(b)b.textContent=t==="dark"?"🌞":"🌙";
+  localStorage.setItem("ma-theme",t);
+}
+function toggleTheme(){applyTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");}
+initTheme();
 
 // ── HELPERS ───────────────────────────────────────────────
-function getDaysLeft(d){const t=new Date();t.setHours(0,0,0,0);return Math.ceil((new Date(d+"T00:00:00")-t)/86400000)}
-function getUrgency(days){
-  if(days<0)  return{bg:"#CCCCCC",text:"#555",label:"Vencido",dot:"#AAAAAA"};
-  if(days===0)return{bg:B.red,text:B.white,label:"¡HOY!",dot:B.red};
-  if(days<=2) return{bg:B.orange,text:B.white,label:days===1?"Mañana":`${days} días`,dot:B.orange};
-  if(days<=5) return{bg:B.yellow,text:B.black,label:`${days} días`,dot:B.yellow};
-  if(days<=10)return{bg:B.green,text:B.white,label:`${days} días`,dot:B.green};
-  return{bg:B.blue,text:B.white,label:`${days} días`,dot:B.blue};
+function showScreen(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");}
+function toast(msg,type=""){
+  const el=document.createElement("div");el.className="toast"+(type?" "+type:"");
+  el.textContent=(type==="ok"?"✅ ":type==="err"?"❌ ":type==="warn"?"⚠️ ":"✅ ")+msg;
+  document.getElementById("toast-wrap").appendChild(el);
+  setTimeout(()=>el.remove(),3000);
 }
-function getTipo(id){return TIPOS.find(t=>t.id===id)||TIPOS[0]}
-function fmtDate(d){return new Date(d+"T00:00:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"})}
-
-// ── AUTH ──────────────────────────────────────────────────
-let authModo = "login";
-function setModo(m){
-  authModo=m;
-  document.getElementById("tab-login").style.background=m==="login"?B.blue:"transparent";
-  document.getElementById("tab-login").style.color=m==="login"?"#fff":"#888";
-  document.getElementById("tab-registro").style.background=m==="registro"?B.blue:"transparent";
-  document.getElementById("tab-registro").style.color=m==="registro"?"#fff":"#888";
-  document.getElementById("campo-nombre").style.display=m==="registro"?"block":"none";
-  document.getElementById("login-subtitle").textContent=m==="login"?"Iniciá sesión para continuar":"Creá tu cuenta gratis";
-  document.getElementById("btn-login").textContent=m==="login"?"Ingresar 🚀":"Crear mi cuenta ✨";
-  document.getElementById("login-error").style.display="none";
+function emptyHTML(icon,msg,sub=""){return`<div class="empty"><div class="empty-icon">${icon}</div><div class="empty-msg">${msg}</div>${sub?`<div class="empty-sub">${sub}</div>`:""}</div>`;}
+function getDaysLeft(d){const t=new Date();t.setHours(0,0,0,0);return Math.ceil((new Date(d+"T00:00:00")-t)/86400000);}
+function getUrgencia(days){
+  if(days<0) return{bg:"#e2e8f0",text:"#64748b",barColor:"#94a3b8",label:"Vencido"};
+  if(days===0)return{bg:"#fee2e2",text:"#dc2626",barColor:"#dc2626",label:"¡HOY!"};
+  if(days<=2) return{bg:"#fef3c7",text:"#d97706",barColor:"#d97706",label:days===1?"Mañana":`${days} días`};
+  if(days<=5) return{bg:"#fef9c3",text:"#ca8a04",barColor:"#eab308",label:`${days} días`};
+  if(days<=10)return{bg:"#dcfce7",text:"#16a34a",barColor:"#16a34a",label:`${days} días`};
+  return{bg:"#dbeafe",text:"#1d4ed8",barColor:"#1d4ed8",label:`${days} días`};
 }
+function getTipo(id){return TIPOS.find(t=>t.id===id)||TIPOS[0];}
+function fmtFecha(d){return new Date(d+"T00:00:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});}
 
-async function doAuth(){
-  const email=document.getElementById("login-email").value.trim();
-  const pass=document.getElementById("login-pass").value;
-  const nombre=document.getElementById("login-nombre").value.trim();
-  const errEl=document.getElementById("login-error");
-  errEl.style.display="none";
-  if(!email||!pass){showError("Completá todos los campos");return}
-  document.getElementById("btn-login").textContent="Cargando...";
-  try{
-    if(authModo==="registro"){
-      if(!nombre){showError("Escribí tu nombre");return}
-      const cred=await window._createUser(window._auth,email,pass);
-      await window._updateProfile(cred.user,{displayName:nombre});
-      await window._setDoc(window._doc(window._db,"usuarios",cred.user.uid),{nombre,email:email.toLowerCase(),fechaRegistro:window._serverTimestamp()});
-    } else {
-      await window._signIn(window._auth,email,pass);
-    }
-  } catch(e){
-    const msgs={"auth/email-already-in-use":"Ese email ya está registrado","auth/invalid-email":"El email no es válido","auth/weak-password":"La contraseña debe tener al menos 6 caracteres","auth/user-not-found":"No existe una cuenta con ese email","auth/wrong-password":"Contraseña incorrecta","auth/invalid-credential":"Email o contraseña incorrectos"};
-    showError(msgs[e.code]||"Algo salió mal, intentá de nuevo");
-    document.getElementById("btn-login").textContent=authModo==="login"?"Ingresar 🚀":"Crear mi cuenta ✨";
+// ── LOGO TAPS ─────────────────────────────────────────────
+["login-logo","app-logo"].forEach(id=>{
+  document.getElementById(id)?.addEventListener("click",()=>{
+    logoTaps++;clearTimeout(logoTimer);
+    if(logoTaps>=5){logoTaps=0;openPin();return;}
+    logoTimer=setTimeout(()=>logoTaps=0,2000);
+  });
+});
+
+// ── PIN ───────────────────────────────────────────────────
+function openPin(){pinBuf="";updDots();document.getElementById("pin-err").style.display="none";document.getElementById("pin-overlay").classList.add("open");}
+function closePin(){document.getElementById("pin-overlay").classList.remove("open");}
+function updDots(){for(let i=0;i<4;i++)document.getElementById("d"+i).classList.toggle("filled",i<pinBuf.length);}
+
+document.querySelector(".pin-pad").addEventListener("click",e=>{
+  const btn=e.target.closest(".pin-btn");if(!btn)return;
+  const n=btn.dataset.n;
+  if(n==="del"){pinBuf=pinBuf.slice(0,-1);updDots();return;}
+  if(n==="ok"||pinBuf.length===4){checkPin();return;}
+  if(pinBuf.length<4){pinBuf+=n;updDots();}
+  if(pinBuf.length===4)checkPin();
+});
+function checkPin(){
+  if(pinBuf===ADMIN_PIN){closePin();showScreen("screen-admin");loadAdminUsers();}
+  else{document.getElementById("pin-err").style.display="block";pinBuf="";updDots();setTimeout(()=>document.getElementById("pin-err").style.display="none",1500);}
+}
+document.getElementById("btn-pin-close").addEventListener("click",closePin);
+document.getElementById("pin-overlay").addEventListener("click",e=>{if(e.target.id==="pin-overlay")closePin();});
+
+// ── ADMIN ─────────────────────────────────────────────────
+async function loadAdminUsers(){
+  const c=document.getElementById("admin-users-list");
+  c.innerHTML='<div class="loading-wrap"><div class="spinner"></div></div>';
+  const snap=await getDocs(collection(db,"usuarios"));
+  if(snap.empty){c.innerHTML=emptyHTML("👥","Sin usuarios");return;}
+  c.innerHTML=snap.docs.map(d=>{const u=d.data();const ban=u.banned===true;return`<div class="admin-card"><div class="admin-card-title">${u.nombre||u.email}${ban?'<span class="ban-badge">BANEADO</span>':""}</div><div class="admin-card-sub">${u.email||d.id}</div><div class="admin-card-actions">${ban?`<button class="btn-aunban" data-uid="${d.id}">✅ Desbanear</button>`:`<button class="btn-aban" data-uid="${d.id}">🚫 Banear</button>`}<button class="btn-adel" data-uid="${d.id}">🗑️ Eliminar</button></div></div>`;}).join("");
+}
+async function loadAdminTareas(){
+  const c=document.getElementById("admin-tareas-list");
+  c.innerHTML='<div class="loading-wrap"><div class="spinner"></div></div>';
+  // Leer tareas de todos los usuarios
+  const usersSnap=await getDocs(collection(db,"usuarios"));
+  let all=[];
+  for(const userDoc of usersSnap.docs){
+    const tareasSnap=await getDocs(collection(db,"usuarios",userDoc.id,"tareas"));
+    tareasSnap.forEach(d=>all.push({id:d.id,userEmail:userDoc.data().email||userDoc.id,...d.data()}));
   }
+  if(all.length===0){c.innerHTML=emptyHTML("📋","Sin tareas");return;}
+  c.innerHTML=all.map(t=>`<div class="admin-card"><div class="admin-card-title">${t.titulo}</div><div class="admin-card-sub">${t.materia} · ${t.fecha} · ${t.userEmail}</div></div>`).join("");
 }
 
-function showError(msg){
-  const e=document.getElementById("login-error");
-  e.textContent="⚠️ "+msg; e.style.display="block";
-  document.getElementById("btn-login").textContent=authModo==="login"?"Ingresar 🚀":"Crear mi cuenta ✨";
-}
+document.getElementById("admin-users-list").addEventListener("click",async e=>{
+  const ban=e.target.closest(".btn-aban");const unban=e.target.closest(".btn-aunban");const del=e.target.closest(".btn-adel[data-uid]");
+  if(ban&&confirm("¿Banear este usuario?")){await setDoc(doc(db,"usuarios",ban.dataset.uid),{banned:true},{merge:true});toast("Usuario baneado");await loadAdminUsers();}
+  if(unban){await setDoc(doc(db,"usuarios",unban.dataset.uid),{banned:false},{merge:true});toast("Usuario desbaneado");await loadAdminUsers();}
+  if(del&&confirm("¿Eliminar este usuario?")){await deleteDoc(doc(db,"usuarios",del.dataset.uid));toast("Usuario eliminado");await loadAdminUsers();}
+});
+document.getElementById("atab-users").addEventListener("click",()=>{
+  document.getElementById("admin-users-view").style.display="block";document.getElementById("admin-tareas-view").style.display="none";
+  document.getElementById("atab-users").classList.add("active");document.getElementById("atab-tareas").classList.remove("active");
+  loadAdminUsers();
+});
+document.getElementById("atab-tareas").addEventListener("click",()=>{
+  document.getElementById("admin-tareas-view").style.display="block";document.getElementById("admin-users-view").style.display="none";
+  document.getElementById("atab-tareas").classList.add("active");document.getElementById("atab-users").classList.remove("active");
+  loadAdminTareas();
+});
+document.getElementById("btn-admin-exit").addEventListener("click",()=>{if(me)showScreen("screen-app");else showScreen("screen-login");});
 
-function showLoginScreen(){
-  document.getElementById("login-screen").style.display="flex";
-  document.getElementById("app-screen").style.display="none";
-}
+// ── AUTH STATE ────────────────────────────────────────────
+onAuthStateChanged(auth,async user=>{
+  if(user){
+    me=user;
+    await setDoc(doc(db,"usuarios",user.uid),{uid:user.uid,email:user.email,nombre:user.displayName||user.email.split("@")[0],updatedAt:serverTimestamp()},{merge:true});
+    document.getElementById("header-saludo").textContent=user.displayName||user.email.split("@")[0];
+    showScreen("screen-app");
+    startFirestore();
+    renderPage("resumen");
+  } else {
+    me=null;tasks=[];
+    if(unsubTasks){unsubTasks();unsubTasks=null;}
+    showScreen("screen-login");
+  }
+});
 
-function onLogin(user){
-  document.getElementById("login-screen").style.display="none";
-  document.getElementById("app-screen").style.display="block";
-  const nombre=user.displayName||user.email.split("@")[0];
-  document.getElementById("header-saludo").textContent=`Hola, ${nombre} 👋`;
-  document.getElementById("header-fecha").textContent=today.toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});
-  loadNotifCfg();
-  startFirestore();
-  renderHeader();
+// ── AUTH ACTIONS ──────────────────────────────────────────
+document.getElementById("tab-login").addEventListener("click",()=>setAuthMode(false));
+document.getElementById("tab-registro").addEventListener("click",()=>setAuthMode(true));
+function setAuthMode(reg){
+  isRegister=reg;
+  document.getElementById("tab-login").classList.toggle("active",!reg);
+  document.getElementById("tab-registro").classList.toggle("active",reg);
+  document.getElementById("field-nombre").style.display=reg?"block":"none";
+  document.getElementById("btn-auth").textContent=reg?"Crear cuenta →":"Ingresar →";
+  document.getElementById("auth-err").classList.remove("show");
 }
-
-function doLogout(){window._signOut(window._auth)}
+document.getElementById("f-pass").addEventListener("keydown",e=>{if(e.key==="Enter")document.getElementById("btn-auth").click();});
+document.getElementById("btn-auth").addEventListener("click",async()=>{
+  const email=document.getElementById("f-email").value.trim();
+  const pass=document.getElementById("f-pass").value;
+  const nombre=document.getElementById("f-nombre").value.trim();
+  const errEl=document.getElementById("auth-err");
+  errEl.classList.remove("show");errEl.style.display="none";
+  if(!email||!pass){errEl.textContent="Completá todos los campos";errEl.style.display="block";errEl.classList.add("show");return;}
+  const btn=document.getElementById("btn-auth");btn.disabled=true;btn.textContent=isRegister?"Creando...":"Ingresando...";
+  try{
+    if(isRegister){
+      if(!nombre){errEl.textContent="Escribí tu nombre";errEl.style.display="block";errEl.classList.add("show");btn.disabled=false;btn.textContent="Crear cuenta →";return;}
+      const cred=await createUserWithEmailAndPassword(auth,email,pass);
+      await updateProfile(cred.user,{displayName:nombre});
+    } else {
+      await signInWithEmailAndPassword(auth,email,pass);
+    }
+  }catch(e){
+    const msgs={"auth/user-not-found":"No existe cuenta con ese email.","auth/wrong-password":"Contraseña incorrecta.","auth/email-already-in-use":"Ya existe cuenta con ese email.","auth/weak-password":"Mínimo 6 caracteres.","auth/invalid-credential":"Email o contraseña incorrectos."};
+    errEl.textContent=msgs[e.code]||"Error. Intentá de nuevo.";
+    errEl.style.display="block";errEl.classList.add("show");
+  }
+  btn.disabled=false;btn.textContent=isRegister?"Crear cuenta →":"Ingresar →";
+});
+document.getElementById("btn-logout").addEventListener("click",()=>signOut(auth));
+document.getElementById("btn-theme").addEventListener("click",toggleTheme);
 
 // ── FIRESTORE ─────────────────────────────────────────────
 function startFirestore(){
-  const q=window._query(window._collection(window._db,"usuarios",window._user.uid,"tareas"),window._orderBy("fecha","asc"));
-  window._onSnapshot(q,snap=>{
+  const q=query(collection(db,"usuarios",me.uid,"tareas"),orderBy("fecha","asc"));
+  unsubTasks=onSnapshot(q,snap=>{
     tasks=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderAll();
   });
 }
 
 async function saveTask(){
-  if(!form.titulo||!form.fecha||!window._user)return;
+  if(!form.titulo||!form.fecha||!me)return;
   const id=Date.now().toString();
-  await window._setDoc(window._doc(window._db,"usuarios",window._user.uid,"tareas",id),{...form,creadoEn:window._serverTimestamp()});
+  await setDoc(doc(db,"usuarios",me.uid,"tareas",id),{...form,creadoEn:serverTimestamp()});
+  toast("Actividad guardada","ok");
   form={titulo:"",materia:"Matemática",tipo:"examen",fecha:"",descripcion:""};
-  showToast("✅ ¡Actividad guardada!",B.green);
-  setScreen("resumen");
+  renderPage("resumen");
 }
 
 async function deleteTask(id){
-  await window._deleteDoc(window._doc(window._db,"usuarios",window._user.uid,"tareas",id));
+  await deleteDoc(doc(db,"usuarios",me.uid,"tareas",id));
+  toast("Actividad eliminada");
 }
 
-// ── RENDER ────────────────────────────────────────────────
-function renderAll(){renderHeader();renderResumen();renderAgenda();renderNueva()}
-
-function renderHeader(){
-  const color=MONTH_COLORS[calMonth];
-  document.getElementById("app-header").style.background=color;
-  document.getElementById("app-header").querySelectorAll("*").forEach(el=>{if(el.id==="notif-dot")el.style.borderColor=color});
-  const upcoming=tasks.filter(t=>getDaysLeft(t.fecha)>=0);
-  document.getElementById("header-count").textContent=upcoming.length;
-  document.getElementById("notif-dot").style.display=notif.enabled?"block":"none";
+// ── RENDER ALL ────────────────────────────────────────────
+function renderAll(){
+  updateHeaderCount();
+  if(currentPage==="resumen")renderResumen();
+  else if(currentPage==="agenda")renderAgenda();
+  else if(currentPage==="nueva")renderNueva();
+}
+function updateHeaderCount(){
+  const n=tasks.filter(t=>getDaysLeft(t.fecha)>=0).length;
+  document.getElementById("header-count").textContent=`${n} próxima${n!==1?"s":""}`;
 }
 
+// ── RESUMEN ───────────────────────────────────────────────
 function renderResumen(){
   const el=document.getElementById("page-resumen");
   const upcoming=tasks.map(t=>({...t,dl:getDaysLeft(t.fecha)})).filter(t=>t.dl>=0).sort((a,b)=>a.dl-b.dl);
   const past=tasks.map(t=>({...t,dl:getDaysLeft(t.fecha)})).filter(t=>t.dl<0).sort((a,b)=>b.dl-a.dl);
-  let html=`<div style="font-family:'Fredoka One',sans-serif;font-size:24px;margin-bottom:16px;color:#111">Próximas actividades</div>`;
+  let html=`<div class="sec-header"><span class="sec-title" style="font-size:17px">Próximas actividades</span></div>`;
   if(upcoming.length===0){
-    html+=`<div style="text-align:center;padding:40px 20px;background:#fff;border-radius:20px;border:3px dashed #CCC">
-      <div style="font-size:52px">🎉</div>
-      <div style="font-family:'Fredoka One',sans-serif;font-size:20px;margin-top:8px;color:${B.green}">¡Todo al día!</div>
-      <div style="font-size:14px;margin-top:4px;color:#888;font-family:'Nunito',sans-serif;font-weight:800">No tenés actividades pendientes</div>
-    </div>`;
-  }
-  upcoming.forEach((t,idx)=>{
-    const tipo=getTipo(t.tipo);const urg=getUrgency(t.dl);const hot=t.dl<=1;
-    html+=`<div class="card up" style="background:#fff;border-radius:16px;margin-bottom:12px;overflow:hidden;border:3px solid ${urg.dot};box-shadow:${hot?`0 4px 20px ${urg.dot}55`:"0 2px 10px rgba(0,0,0,0.07)"};animation-delay:${idx*0.05}s">
-      <div style="height:6px;background:${urg.bg}"></div>
-      <div style="padding:12px 14px">
-        <div style="display:flex;align-items:flex-start;gap:10px">
-          <div style="flex:1">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
-              <span style="font-size:12px;background:${tipo.bg};color:${tipo.color};padding:3px 10px;border-radius:20px;font-family:'Fredoka One',sans-serif;border:1.5px solid ${tipo.color}">${tipo.label}</span>
-              <span style="font-size:12px;color:#666;font-family:'Nunito',sans-serif;font-weight:800">${t.materia}</span>
+    html+=emptyHTML("🎉","¡Todo al día!","No tenés actividades pendientes");
+  } else {
+    html+=upcoming.map(t=>{
+      const tipo=getTipo(t.tipo);const urg=getUrgencia(t.dl);const hot=t.dl<=1;
+      return`<div class="tarea-card">
+        <div class="tarea-bar" style="background:${urg.barColor}"></div>
+        <div class="tarea-body">
+          <div class="tarea-top">
+            <div class="tarea-info">
+              <div class="tarea-meta">
+                <span class="tarea-tag" style="background:${tipo.bg};color:${tipo.color}">${tipo.label}</span>
+                <span class="tarea-tag" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border)">${t.materia}</span>
+              </div>
+              <div class="tarea-titulo">${t.titulo}</div>
+              ${t.descripcion?`<div class="tarea-desc">${t.descripcion}</div>`:""}
+              <div class="tarea-fecha">📅 ${fmtFecha(t.fecha)}</div>
             </div>
-            <div style="font-family:'Fredoka One',sans-serif;font-size:18px;color:#111;line-height:1.2">${t.titulo}</div>
-            ${t.descripcion?`<div style="font-size:13px;color:#555;margin-top:5px;line-height:1.5;font-family:'Nunito',sans-serif;font-weight:700">${t.descripcion}</div>`:""}
-            <div style="font-size:12px;color:#888;margin-top:6px;font-family:'Nunito',sans-serif;font-weight:800">📅 ${fmtDate(t.fecha)}</div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-            <div class="${hot?"blink":""}" style="background:${urg.bg};color:${urg.text};border-radius:14px;padding:8px 12px;font-family:'Fredoka One',sans-serif;font-size:${t.dl===0?13:22}px;min-width:58px;text-align:center;box-shadow:${hot?`0 0 16px ${urg.dot}88`:"none"};border:2px solid ${urg.dot}">
-              ${t.dl===0?"¡HOY!":t.dl}
+            <div>
+              <div class="urgencia-badge ${hot?"blink":""}" style="background:${urg.bg};color:${urg.text}">
+                <div class="urgencia-num">${t.dl===0?"¡HOY!":t.dl}</div>
+                ${t.dl>0?`<div class="urgencia-lbl">días</div>`:""}
+              </div>
+              <button class="btn-sm danger" data-del="${t.id}" style="width:100%;margin-top:6px;padding:5px;justify-content:center">🗑</button>
             </div>
-            ${t.dl>1?`<div style="font-size:10px;color:#888;font-family:'Nunito',sans-serif;font-weight:900">DÍAS</div>`:""}
-            <button onclick="openDel('${t.id}')" style="background:none;border:none;cursor:pointer;font-size:18px;margin-top:2px">🗑️</button>
           </div>
         </div>
-      </div>
-    </div>`;
-  });
-  html+=`<div style="background:#fff;border-radius:16px;padding:16px;border:2px solid #E8E8E8;margin-top:8px">
-    <div style="font-family:'Fredoka One',sans-serif;font-size:16px;margin-bottom:10px;color:#111">¿Qué significa cada color?</div>
-    ${[[B.red,B.white,"🔴 Hoy — ¡Es hoy!"],[B.orange,B.white,"🟠 1-2 días — ¡Urgente!"],[B.yellow,B.black,"🟡 3-5 días — ¡Atención!"],[B.green,B.white,"🟢 6-10 días — Con tiempo"],[B.blue,B.white,"🔵 +10 días — Tranquilo"]].map(([bg,col,lbl])=>`
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
-      <div style="width:36px;height:20px;border-radius:8px;background:${bg};flex-shrink:0"></div>
-      <span style="font-size:14px;font-family:'Nunito',sans-serif;font-weight:800;color:#111">${lbl}</span>
-    </div>`).join("")}
-  </div>`;
-  if(past.length>0){
-    html+=`<div style="font-family:'Fredoka One',sans-serif;font-size:18px;margin:20px 0 10px;color:#AAA">Actividades pasadas</div>`;
-    past.forEach(t=>{
-      const tipo=getTipo(t.tipo);
-      html+=`<div style="background:#F4F4F4;border-radius:12px;padding:10px 14px;margin-bottom:8px;border:2px solid #E0E0E0;opacity:0.65;display:flex;align-items:center;gap:10px">
-        <div style="flex:1">
-          <div style="font-family:'Fredoka One',sans-serif;font-size:15px;text-decoration:line-through;color:#AAA">${t.titulo}</div>
-          <div style="font-size:12px;color:#BBB;font-family:'Nunito',sans-serif;font-weight:800">${t.materia} · ${tipo.label}</div>
-        </div>
-        <button onclick="openDel('${t.id}')" style="background:none;border:none;cursor:pointer;font-size:16px;color:#CCC">🗑️</button>
       </div>`;
-    });
+    }).join("");
   }
+
+  // Leyenda
+  html+=`<div class="card" style="margin-top:8px">
+    <div class="sec-title" style="margin-bottom:10px">¿Qué significa cada color?</div>
+    <div class="leyenda">
+      <div class="leyenda-item"><div class="leyenda-dot" style="background:#dc2626"></div>Hoy</div>
+      <div class="leyenda-item"><div class="leyenda-dot" style="background:#d97706"></div>1-2 días</div>
+      <div class="leyenda-item"><div class="leyenda-dot" style="background:#eab308"></div>3-5 días</div>
+      <div class="leyenda-item"><div class="leyenda-dot" style="background:#16a34a"></div>6-10 días</div>
+      <div class="leyenda-item"><div class="leyenda-dot" style="background:#1d4ed8"></div>+10 días</div>
+    </div>
+  </div>`;
+
+  if(past.length>0){
+    html+=`<div class="sec-title" style="color:var(--muted);margin:20px 0 10px">Actividades pasadas</div>`;
+    html+=past.map(t=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;opacity:.5;display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-weight:700;text-decoration:line-through;color:var(--muted)">${t.titulo}</div><div style="font-size:12px;color:var(--muted)">${t.materia} · ${getTipo(t.tipo).label}</div></div><button class="btn-sm danger" data-del="${t.id}" style="padding:5px 8px">🗑</button></div>`).join("");
+  }
+
   el.innerHTML=html;
+  el.querySelectorAll("[data-del]").forEach(btn=>btn.addEventListener("click",()=>openDel(btn.dataset.del)));
 }
 
+// ── AGENDA ───────────────────────────────────────────────
 function renderAgenda(){
   const el=document.getElementById("page-agenda");
-  const color=MONTH_COLORS[calMonth];
   const firstDay=new Date(calYear,calMonth,1).getDay();
   const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
-  let html=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <button class="press" onclick="prevMonth()" style="background:${color};border:none;color:#fff;border-radius:10px;width:38px;height:38px;font-size:20px;cursor:pointer;box-shadow:2px 2px 0 rgba(0,0,0,0.15)">‹</button>
-      <div style="font-family:'Fredoka One',sans-serif;font-size:22px;color:${color}">${MONTHS_ES[calMonth]} ${calYear}</div>
-      <button class="press" onclick="nextMonth()" style="background:${color};border:none;color:#fff;border-radius:10px;width:38px;height:38px;font-size:20px;cursor:pointer;box-shadow:2px 2px 0 rgba(0,0,0,0.15)">›</button>
+  const daysInPrev=new Date(calYear,calMonth,0).getDate();
+  const today=new Date();
+
+  let cal=`<div class="card">
+    <div class="cal-header">
+      <button class="btn-sm" id="btn-prev-month">◀</button>
+      <div class="cal-month">${MESES[calMonth]} ${calYear}</div>
+      <button class="btn-sm" id="btn-next-month">▶</button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px">
-      ${DAYS_ES.map((d,i)=>`<div style="text-align:center;font-size:12px;font-family:'Nunito',sans-serif;font-weight:900;color:${i===0||i===6?B.red:B.black};padding:4px 0">${d}</div>`).join("")}
+    <div class="cal-grid" style="margin-bottom:4px">
+      ${DIAS.map(d=>`<div class="cal-day-header">${d}</div>`).join("")}
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">
-      ${Array(firstDay).fill('<div></div>').join("")}
+    <div class="cal-grid">
+      ${Array(firstDay).fill(null).map((_,i)=>`<div class="cal-day other-month"><div class="cal-day-num">${daysInPrev-firstDay+1+i}</div></div>`).join("")}
       ${Array(daysInMonth).fill(null).map((_,i)=>{
         const day=i+1;
         const ds=`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
         const dt=tasks.filter(t=>t.fecha===ds);
-        const isToday=ds===todayStr; const isSel=selDay===day;
-        const isWE=new Date(calYear,calMonth,day).getDay()===0||new Date(calYear,calMonth,day).getDay()===6;
-        return `<div class="cal-cell press" onclick="clickDay(${day})" style="border-radius:10px;padding:5px 2px;text-align:center;cursor:pointer;min-height:52px;background:${isSel?color:isToday?B.yellow:"#fff"};border:2px solid ${isSel?color:isToday?B.yellow:"#E0E0E0"};transition:all 0.15s">
-          <div style="font-size:15px;font-family:'Fredoka One',sans-serif;color:${isSel?"#fff":isToday?B.black:isWE?B.red:B.black}">${day}</div>
-          ${dt.length>0?`<div style="display:flex;justify-content:center;gap:2px;flex-wrap:wrap;margin-top:2px">${dt.slice(0,3).map(t=>`<div style="width:8px;height:8px;border-radius:50%;background:${getTipo(t.tipo).color};border:1.5px solid #fff"></div>`).join("")}</div>`:""}
+        const isToday=day===today.getDate()&&calMonth===today.getMonth()&&calYear===today.getFullYear();
+        const isSel=selDay===day;
+        return`<div class="cal-day${isToday?" today":""}${isSel?" selected":""}" data-day="${day}">
+          <div class="cal-day-num">${day}</div>
+          ${dt.length>0?`<div class="cal-dot"></div>`:""}
         </div>`;
       }).join("")}
-    </div>`;
+    </div>
+  </div>`;
+
+  // Día seleccionado
+  let detalle="";
   if(selDay){
-    const dt=tasks.filter(t=>t.fecha===`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(selDay).padStart(2,"0")}`);
-    html+=`<div style="margin-top:14px;background:#fff;border-radius:16px;padding:14px;border:3px solid ${color};box-shadow:0 4px 16px rgba(0,0,0,0.1)" class="pop">
-      <div style="font-family:'Fredoka One',sans-serif;font-size:18px;margin-bottom:10px;color:${color}">${selDay} de ${MONTHS_ES[calMonth]}</div>
-      ${dt.length===0?`<div style="color:#AAA;font-size:14px;text-align:center;padding:10px 0;font-family:'Nunito',sans-serif;font-weight:800">Sin actividades este día ✨</div>`
-      :dt.map(t=>{
-        const tipo=getTipo(t.tipo);const urg=getUrgency(getDaysLeft(t.fecha));
-        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${tipo.bg};border-radius:12px;margin-bottom:8px;border-left:5px solid ${tipo.color}">
-          <div style="flex:1">
-            <div style="font-family:'Fredoka One',sans-serif;font-size:15px;color:#111">${t.titulo}</div>
-            <div style="font-size:12px;color:#555;font-family:'Nunito',sans-serif;font-weight:800">${t.materia} · ${tipo.label}</div>
-          </div>
-          <div style="background:${urg.bg};color:${urg.text};border-radius:8px;padding:4px 10px;font-family:'Fredoka One',sans-serif;font-size:13px">${urg.label}</div>
-        </div>`;
-      }).join("")}
+    const ds=`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(selDay).padStart(2,"0")}`;
+    const dt=tasks.filter(t=>t.fecha===ds);
+    detalle=`<div class="card">
+      <div class="sec-title" style="margin-bottom:12px">${selDay} de ${MESES[calMonth]}</div>
+      ${dt.length===0?`<div style="text-align:center;padding:16px;color:var(--muted);font-size:14px">Sin actividades este día</div>`:
+      dt.map(t=>{const tipo=getTipo(t.tipo);const urg=getUrgencia(getDaysLeft(t.fecha));return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${tipo.bg};border-radius:var(--radius-sm);margin-bottom:8px;border-left:4px solid ${tipo.color}"><div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--text)">${t.titulo}</div><div style="font-size:12px;color:var(--muted)">${t.materia} · ${tipo.label}</div></div><span style="background:${urg.bg};color:${urg.text};font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px">${urg.label}</span></div>`;}).join("")}
     </div>`;
   }
-  html+=`<div style="margin-top:14px;background:#fff;border-radius:14px;padding:10px 14px;border:2px solid #E8E8E8;display:flex;gap:10px;flex-wrap:wrap">
-    ${TIPOS.map(t=>`<div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:${t.color}"></div><span style="font-size:12px;font-family:'Nunito',sans-serif;font-weight:800;color:#111">${t.label.split(" ").slice(1).join(" ")}</span></div>`).join("")}
-  </div>`;
-  el.innerHTML=html;
+
+  // Leyenda tipos
+  const leyenda=`<div class="card"><div style="display:flex;flex-wrap:wrap;gap:10px">${TIPOS.map(t=>`<div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:${t.color}"></div><span style="font-size:12px;color:var(--muted)">${t.label.split(" ").slice(1).join(" ")}</span></div>`).join("")}</div></div>`;
+
+  el.innerHTML=cal+detalle+leyenda;
+  el.querySelectorAll(".cal-day[data-day]").forEach(d=>d.addEventListener("click",()=>{selDay=selDay===parseInt(d.dataset.day)?null:parseInt(d.dataset.day);renderAgenda();}));
+  el.querySelector("#btn-prev-month")?.addEventListener("click",()=>{if(calMonth===0){calMonth=11;calYear--;}else calMonth--;selDay=null;renderAgenda();});
+  el.querySelector("#btn-next-month")?.addEventListener("click",()=>{if(calMonth===11){calMonth=0;calYear++;}else calMonth++;selDay=null;renderAgenda();});
 }
 
+// ── NUEVA ─────────────────────────────────────────────────
 function renderNueva(){
   const el=document.getElementById("page-nueva");
-  let urgHTML="";
-  if(form.fecha){const d=getDaysLeft(form.fecha);const urg=getUrgency(d);urgHTML=`<div style="margin-top:7px;display:inline-block;background:${urg.bg};color:${urg.text};padding:4px 14px;border-radius:20px;font-family:'Fredoka One',sans-serif;font-size:14px;box-shadow:0 2px 8px ${urg.dot}55">⏱ ${urg.label}</div>`;}
+  let urgPreview="";
+  if(form.fecha){const d=getDaysLeft(form.fecha);const urg=getUrgencia(d);urgPreview=`<div class="urgencia-preview" style="background:${urg.bg};color:${urg.text}">⏱ ${urg.label}</div>`;}
   el.innerHTML=`
-    <div style="font-family:'Fredoka One',sans-serif;font-size:26px;margin-bottom:18px;color:#111">Nueva Actividad ✏️</div>
-    <div style="margin-bottom:18px">
-      <div style="font-size:13px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:8px">TIPO DE ACTIVIDAD</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        ${TIPOS.map(t=>`<button class="press" onclick="setFormTipo('${t.id}')" style="padding:13px 8px;border-radius:14px;cursor:pointer;font-family:'Fredoka One',sans-serif;font-size:14px;background:${form.tipo===t.id?t.bg:"#fff"};border:3px solid ${form.tipo===t.id?t.color:"#E0E0E0"};color:${form.tipo===t.id?t.color:"#888"};box-shadow:${form.tipo===t.id?`0 3px 12px ${t.color}44`:"none"};transition:all 0.18s">${t.label}</button>`).join("")}
+    <div class="sec-title" style="font-size:17px;margin-bottom:16px">Nueva actividad ✏️</div>
+    <div class="card">
+      <div class="field" style="margin-bottom:10px"><label>Tipo de actividad</label>
+        <div class="tipos-grid">
+          ${TIPOS.map(t=>`<button class="tipo-btn${form.tipo===t.id?" active":""}" data-tipo="${t.id}" style="${form.tipo===t.id?`border-color:${t.color};background:${t.bg};color:${t.color}`:""}">${t.label}</button>`).join("")}
+        </div>
       </div>
-    </div>
-    <div style="margin-bottom:14px">
-      <div style="font-size:13px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:8px">MATERIA</div>
-      <select onchange="setFormMateria(this.value)" style="width:100%;padding:13px 14px;border-radius:12px;background:#fff;border:3px solid #E0E0E0;color:#111;font-size:15px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">
-        ${MATERIAS.map(m=>`<option value="${m}" ${form.materia===m?"selected":""}>${m}</option>`).join("")}
-      </select>
-    </div>
-    <div style="margin-bottom:14px">
-      <div style="font-size:13px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:8px">TÍTULO / TEMA</div>
-      <input id="form-titulo" value="${form.titulo}" oninput="setFormTitulo(this.value)" placeholder="Ej: Parcial de álgebra, TP Revolución Francesa..."
-        style="width:100%;padding:13px 14px;border-radius:12px;background:#fff;border:3px solid ${form.titulo?B.green:"#E0E0E0"};color:#111;font-size:15px;font-family:'Nunito',sans-serif;font-weight:700;transition:border 0.2s"/>
-    </div>
-    <div style="margin-bottom:14px">
-      <div style="font-size:13px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:8px">FECHA 📅</div>
-      <input type="date" id="form-fecha" value="${form.fecha}" min="${todayStr}" oninput="setFormFecha(this.value)"
-        style="width:100%;padding:13px 14px;border-radius:12px;background:#fff;border:3px solid ${form.fecha?B.blue:"#E0E0E0"};color:#111;font-size:15px;font-family:'Nunito',sans-serif;font-weight:700;transition:border 0.2s"/>
-      ${urgHTML}
-    </div>
-    <div style="margin-bottom:22px">
-      <div style="font-size:13px;font-family:'Nunito',sans-serif;font-weight:900;color:#111;margin-bottom:8px">NOTAS <span style="font-weight:700;color:#AAA">(opcional)</span></div>
-      <textarea oninput="setFormDesc(this.value)" placeholder="Temas, capítulos, materiales que necesitás..." rows="3"
-        style="width:100%;padding:13px 14px;border-radius:12px;background:#fff;border:3px solid #E0E0E0;color:#111;font-size:14px;font-family:'Nunito',sans-serif;font-weight:700;resize:none;line-height:1.6">${form.descripcion}</textarea>
-    </div>
-    <button class="press" onclick="saveTask()" ${!form.titulo||!form.fecha?"disabled":""}
-      style="width:100%;padding:16px;border-radius:16px;cursor:${form.titulo&&form.fecha?"pointer":"not-allowed"};background:${form.titulo&&form.fecha?B.blue:"#CCC"};color:#fff;font-family:'Fredoka One',sans-serif;font-size:20px;border:none;box-shadow:${form.titulo&&form.fecha?`0 5px 20px ${B.blue}55`:"none"};transition:all 0.2s">
-      Guardar actividad 🚀
-    </button>
-    <div style="font-size:12px;color:#AAA;text-align:center;margin-top:10px;font-family:'Nunito',sans-serif;font-weight:700">Tus datos se guardan en la nube ☁️</div>
-  `;
+      <div class="field"><label>Materia</label>
+        <select id="f-materia">${MATERIAS.map(m=>`<option value="${m}"${form.materia===m?" selected":""}>${m}</option>`).join("")}</select>
+      </div>
+      <div class="field"><label>Título / Tema *</label>
+        <input id="f-titulo" value="${form.titulo}" placeholder="Ej: Parcial de álgebra, TP Revolución Francesa..."/>
+      </div>
+      <div class="field"><label>Fecha *</label>
+        <input id="f-fecha" type="date" value="${form.fecha}" min="${todayStr}"/>
+        ${urgPreview}
+      </div>
+      <div class="field"><label>Notas <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
+        <textarea id="f-desc" rows="3" placeholder="Temas, capítulos, materiales...">${form.descripcion}</textarea>
+      </div>
+      <button class="btn-sm gold" id="btn-save-task" style="width:100%;justify-content:center;padding:13px;font-size:15px;${!form.titulo||!form.fecha?"opacity:.5;cursor:not-allowed":""}">
+        Guardar actividad 🚀
+      </button>
+    </div>`;
+
+  el.querySelectorAll(".tipo-btn[data-tipo]").forEach(btn=>btn.addEventListener("click",()=>{form.tipo=btn.dataset.tipo;renderNueva();}));
+  el.querySelector("#f-materia").addEventListener("change",e=>form.materia=e.target.value);
+  el.querySelector("#f-titulo").addEventListener("input",e=>{form.titulo=e.target.value;});
+  el.querySelector("#f-fecha").addEventListener("change",e=>{form.fecha=e.target.value;renderNueva();});
+  el.querySelector("#f-desc").addEventListener("input",e=>form.descripcion=e.target.value);
+  el.querySelector("#btn-save-task").addEventListener("click",()=>{if(form.titulo&&form.fecha)saveTask();else toast("Completá título y fecha","warn");});
 }
 
 // ── NAVEGACIÓN ────────────────────────────────────────────
-function setScreen(s){
-  currentScreen=s;
-  ["resumen","agenda","nueva"].forEach(id=>{
-    document.getElementById("page-"+id).style.display=id===s?"block":"none";
-  });
-  const color=MONTH_COLORS[calMonth];
-  document.querySelectorAll("[data-screen]").forEach(btn=>{
-    const active=btn.dataset.screen===s;
-    btn.style.background=active?"#F4F4F0":"transparent";
-    btn.style.color=active?color:"#111";
-    btn.style.borderBottom=active?`4px solid ${color}`:"4px solid transparent";
-  });
+function renderPage(page){
+  currentPage=page;
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.getElementById("page-"+page).classList.add("active");
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
+  if(page==="resumen")renderResumen();
+  else if(page==="agenda")renderAgenda();
+  else if(page==="nueva")renderNueva();
 }
-
-function clickDay(day){selDay=selDay===day?null:day;renderAgenda()}
-function prevMonth(){if(calMonth===0){calMonth=11;calYear--}else calMonth--;selDay=null;renderAgenda();renderHeader()}
-function nextMonth(){if(calMonth===11){calMonth=0;calYear++}else calMonth++;selDay=null;renderAgenda();renderHeader()}
-
-function setFormTipo(v){form.tipo=v;renderNueva()}
-function setFormMateria(v){form.materia=v}
-function setFormTitulo(v){form.titulo=v;document.getElementById("form-titulo").style.borderColor=v?B.green:"#E0E0E0"}
-function setFormFecha(v){form.fecha=v;renderNueva()}
-function setFormDesc(v){form.descripcion=v}
+document.querySelectorAll(".nav-btn[data-page]").forEach(b=>b.addEventListener("click",()=>renderPage(b.dataset.page)));
 
 // ── ELIMINAR ──────────────────────────────────────────────
-function openDel(id){delId=id;const m=document.getElementById("modal-del");m.style.display="flex"}
-function cancelDel(){delId=null;document.getElementById("modal-del").style.display="none"}
-async function confirmDel(){await deleteTask(delId);cancelDel()}
-
-// ── NOTIFICACIONES ────────────────────────────────────────
-function loadNotifCfg(){
-  if(!window._user)return;
-  try{const s=JSON.parse(localStorage.getItem(`notif_${window._user.uid}`)||"{}");notif={...DEFAULT_NOTIF,...s};}catch{}
-  renderCfg();startNotifTimer();
-}
-function saveNotifCfg(){if(window._user)localStorage.setItem(`notif_${window._user.uid}`,JSON.stringify(notif))}
-
-function toggleCfg(){
-  cfgOpen=!cfgOpen;
-  const p=document.getElementById("cfg-panel");
-  p.style.display=cfgOpen?"flex":"none";
-  if(cfgOpen)renderCfg();
-}
-
-function renderCfg(){
-  const permColor=notif.permiso==="granted"?B.green:notif.permiso==="denied"?B.red:B.orange;
-  const permLabel=notif.permiso==="granted"?"Activadas ✅":notif.permiso==="denied"?"Bloqueadas ❌":"Sin permiso ⚠️";
-  document.getElementById("cfg-permiso").innerHTML=`
-    <div style="width:12px;height:12px;border-radius:50%;background:${permColor};flex-shrink:0"></div>
-    <div style="flex:1">
-      <div style="font-family:'Fredoka One',sans-serif;font-size:15px;color:#111">Estado del navegador</div>
-      <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;color:${permColor}">${permLabel}</div>
-    </div>
-    ${notif.permiso!=="granted"?`<button class="press" onclick="requestPermission()" style="background:${B.blue};border:none;border-radius:10px;padding:8px 14px;color:#fff;font-family:'Fredoka One',sans-serif;font-size:13px;cursor:pointer">Activar</button>`:""}`;
-  const tog=document.getElementById("notif-toggle");
-  tog.style.background=notif.enabled?B.green:"#CCC";
-  document.getElementById("notif-thumb").style.left=notif.enabled?"27px":"3px";
-  document.getElementById("cfg-toggle-sub").textContent=notif.enabled?"Vas a recibir recordatorios":"Los avisos están apagados";
-  document.getElementById("cfg-extras").style.display=notif.enabled?"block":"none";
-  document.getElementById("notif-hora").value=notif.hora;
-  const dias=[0,1,2,3,5,7];const labels={0:"El día",1:"1 día",2:"2 días",3:"3 días",5:"5 días",7:"1 semana"};
-  document.getElementById("chips-dias").innerHTML=dias.map(d=>{
-    const sel=notif.diasAntes.includes(d);
-    return `<button class="chip press" onclick="toggleDia(${d})" style="background:${sel?B.blue:"#fff"};color:${sel?"#fff":"#111"};border:3px solid ${sel?B.blue:"#DDD"};box-shadow:${sel?`0 3px 10px ${B.blue}44`:"none"}">${labels[d]}</button>`;
-  }).join("");
-  const c1=document.getElementById("chip-1vez"),c2=document.getElementById("chip-2vez");
-  if(c1){c1.style.background=notif.vecesAlDia===1?B.orange:"#fff";c1.style.color=notif.vecesAlDia===1?"#fff":"#111";c1.style.borderColor=notif.vecesAlDia===1?B.orange:"#DDD";}
-  if(c2){c2.style.background=notif.vecesAlDia===2?B.orange:"#fff";c2.style.color=notif.vecesAlDia===2?"#fff":"#111";c2.style.borderColor=notif.vecesAlDia===2?B.orange:"#DDD";}
-  const d2=document.getElementById("cfg-2do-aviso");
-  if(d2){if(notif.vecesAlDia===2){const[h,m]=notif.hora.split(":").map(Number);d2.textContent=`2do aviso: ${String((h+8)%24).padStart(2,"0")}:${String(m).padStart(2,"0")} (8hs después)`;d2.style.display="block";}else{d2.style.display="none";}}
-}
-
-function toggleNotif(){notif.enabled=!notif.enabled;saveNotifCfg();renderCfg();renderHeader();startNotifTimer()}
-function toggleDia(d){notif.diasAntes=notif.diasAntes.includes(d)?notif.diasAntes.filter(x=>x!==d):[...notif.diasAntes,d].sort((a,b)=>a-b);saveNotifCfg();renderCfg()}
-function setNotifHora(v){notif.hora=v;saveNotifCfg();renderCfg()}
-function setVeces(v){notif.vecesAlDia=v;saveNotifCfg();renderCfg()}
-function saveCfg(){saveNotifCfg();const b=document.getElementById("btn-guardar-cfg");b.textContent="✅ ¡Guardado!";b.style.background=B.green;setTimeout(()=>{b.textContent="Guardar ✓";b.style.background=B.blue;toggleCfg();},1200)}
-
-async function requestPermission(){
-  if(!("Notification" in window)){showToast("Tu navegador no soporta notificaciones",B.orange);return}
-  const r=await Notification.requestPermission();
-  notif.permiso=r;if(r==="granted")notif.enabled=true;
-  saveNotifCfg();renderCfg();renderHeader();
-  if(r==="granted")showToast("✅ Notificaciones activadas!",B.green);
-  else showToast("❌ Permiso denegado",B.red);
-}
-
-function testNotif(){
-  const msg='⏳ En 3 días: Examen de Historia: "Revolución Francesa"';
-  if(notif.permiso==="granted"&&"Notification" in window)new Notification("⏳ MiAgenda",{body:msg});
-  showToast(msg,B.orange);
-}
-
-function startNotifTimer(){
-  if(notifTimer)clearInterval(notifTimer);
-  if(!notif.enabled)return;
-  notifTimer=setInterval(()=>{
-    const now=new Date();
-    const hhmm=`${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
-    const times=[notif.hora];
-    if(notif.vecesAlDia===2){const[h,m]=notif.hora.split(":").map(Number);times.push(`${String((h+8)%24).padStart(2,"0")}:${String(m).padStart(2,"0")}`)}
-    if(!times.includes(hhmm))return;
-    const key=hhmm+"-"+todayStr;
-    if(localStorage.getItem("last_notif")===key)return;
-    localStorage.setItem("last_notif",key);
-    tasks.map(t=>({...t,dl:getDaysLeft(t.fecha)})).filter(t=>t.dl>=0&&notif.diasAntes.includes(t.dl)).forEach(t=>{
-      const urg=getUrgency(t.dl);const tipo=getTipo(t.tipo);
-      const lbl=tipo.label.split(" ").slice(1).join(" ");
-      const msg=t.dl===0?`🔴 ¡HOY! ${lbl} de ${t.materia}: "${t.titulo}"`:t.dl===1?`🟠 Mañana: ${lbl} de ${t.materia}: "${t.titulo}"`:(`⏳ En ${t.dl} días: ${lbl} de ${t.materia}: "${t.titulo}"`);
-      if(notif.permiso==="granted"&&"Notification" in window)new Notification("⏳ MiAgenda",{body:msg});
-      showToast(msg,urg.dot);
-    });
-  },60000);
-}
-
-// ── TOAST ─────────────────────────────────────────────────
-function showToast(msg,color=B.blue){
-  const id=Date.now();
-  const el=document.createElement("div");
-  el.className="toast-anim";
-  el.style.cssText=`background:#fff;border-radius:12px;padding:11px 14px;border-left:5px solid ${color};box-shadow:0 4px 20px rgba(0,0,0,0.18);font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;color:#111;line-height:1.4`;
-  el.textContent=msg;
-  document.getElementById("toast-container").appendChild(el);
-  setTimeout(()=>el.remove(),4000);
-}
-
-// ── LOGIN ENTER ───────────────────────────────────────────
-document.getElementById("login-pass").addEventListener("keydown",e=>{if(e.key==="Enter")doAuth()});
+function openDel(id){delId=id;document.getElementById("modal-del").classList.add("open");}
+document.getElementById("btn-cancel-del").addEventListener("click",()=>{delId=null;document.getElementById("modal-del").classList.remove("open");});
+document.getElementById("btn-confirm-del").addEventListener("click",async()=>{if(delId)await deleteTask(delId);delId=null;document.getElementById("modal-del").classList.remove("open");});
+document.getElementById("modal-del").addEventListener("click",e=>{if(e.target.id==="modal-del"){delId=null;document.getElementById("modal-del").classList.remove("open");}});
 </script>
+
+<!--
+FIRESTORE SECURITY RULES
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /usuarios/{userId} {
+      allow read, write: if request.auth != null;
+
+      match /tareas/{tareaId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}
+
+ÍNDICES COMPUESTOS
+1. usuarios/{uid}/tareas | fecha ASC
+-->
 </body>
 </html>
