@@ -197,6 +197,24 @@ input,select,button,textarea{font-family:var(--font)}
 .toast.ok{background:var(--green)}
 .toast.err{background:var(--red)}
 .toast.warn{background:var(--warn)}
+/* ══ DEMO VENCIDA ══════════════════════════════════════════ */
+#demo-wall{position:fixed;inset:0;background:linear-gradient(145deg,var(--navy),#1a3060);display:none;align-items:center;justify-content:center;z-index:9990;padding:24px}
+#demo-wall.open{display:flex}
+.demo-card{background:var(--surface);border-radius:20px;padding:36px 28px;width:100%;max-width:380px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.4);animation:fadeUp .4s ease both}
+.demo-icon{font-size:56px;margin-bottom:16px}
+.demo-title{font-size:22px;font-weight:800;color:var(--text);margin-bottom:8px}
+.demo-sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px}
+.btn-demo-email{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;margin-bottom:10px;font-family:var(--font)}
+.btn-demo-email:hover{background:var(--navy3)}
+.btn-demo-logout{font-size:13px;color:var(--muted);cursor:pointer;text-decoration:underline;background:none;border:none;font-family:var(--font);margin-top:4px}
+.demo-countdown{font-size:11px;font-weight:700;background:rgba(240,184,74,.25);color:var(--gold);padding:4px 10px;border-radius:99px;margin-left:6px}
+.demo-countdown.urgente{background:rgba(220,38,38,.25);color:#fca5a5}
+.btn-aext{flex:1;padding:8px;background:#dbeafe;border:1.5px solid #93c5fd;border-radius:8px;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.btn-aact{flex:1;padding:8px;background:var(--green-bg);border:1.5px solid #86efac;border-radius:8px;color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.demo-badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;margin-left:6px}
+.demo-badge.activa{background:var(--warn-bg);color:var(--warn)}
+.demo-badge.vencida{background:var(--red-bg);color:var(--red)}
+.demo-badge.completa{background:var(--green-bg);color:var(--green)}
 </style>
 </head>
 <body>
@@ -297,12 +315,23 @@ input,select,button,textarea{font-family:var(--font)}
   </div>
 </div>
 
+<!-- DEMO VENCIDA -->
+<div id="demo-wall">
+  <div class="demo-card">
+    <div class="demo-icon">⏳</div>
+    <div class="demo-title">Tu demo de 24hs terminó</div>
+    <div class="demo-sub">Gracias por probar MiAgenda. Para seguir organizando tus exámenes y tareas, contactanos y te activamos tu cuenta.</div>
+    <a href="mailto:ventas@raventechsapp.com?subject=Quiero activar MiAgenda&body=Hola, probé la demo y me interesa continuar." class="btn-demo-email">✉️ Contactar por email</a>
+    <button class="btn-demo-logout" id="btn-demo-logout">Cerrar sesión</button>
+  </div>
+</div>
+
 <div id="toast-wrap"></div>
 
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile,GoogleAuthProvider,signInWithPopup}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import{getFirestore,collection,doc,setDoc,deleteDoc,onSnapshot,query,orderBy,serverTimestamp,getDocs}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import{getFirestore,collection,doc,setDoc,getDoc,deleteDoc,onSnapshot,query,orderBy,serverTimestamp,getDocs,Timestamp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // 🔧 FIREBASE CONFIG
 const FB={
@@ -408,7 +437,41 @@ async function loadAdminUsers(){
   c.innerHTML='<div class="loading-wrap"><div class="spinner"></div></div>';
   const snap=await getDocs(collection(db,"usuarios"));
   if(snap.empty){c.innerHTML=emptyHTML("👥","Sin usuarios");return;}
-  c.innerHTML=snap.docs.map(d=>{const u=d.data();const ban=u.banned===true;return`<div class="admin-card"><div class="admin-card-title">${u.nombre||u.email}${ban?'<span class="ban-badge">BANEADO</span>':""}</div><div class="admin-card-sub">${u.email||d.id}</div><div class="admin-card-actions">${ban?`<button class="btn-aunban" data-uid="${d.id}">✅ Desbanear</button>`:`<button class="btn-aban" data-uid="${d.id}">🚫 Banear</button>`}<button class="btn-adel" data-uid="${d.id}">🗑️ Eliminar</button></div></div>`;}).join("");
+  const ahora=Date.now();
+  c.innerHTML=snap.docs.map(d=>{
+    const u=d.data();const ban=u.banned===true;
+    let demoBadge='';let demoInfo='';let demoActions='';
+    if(u.status==='activo'){
+      demoBadge='<span class="demo-badge completa">ACTIVO</span>';
+    } else {
+      const start=u.demoStart?.toMillis?.()||0;
+      const expiry=u.demoExpiry?.toMillis?.()||start+86400000;
+      const restante=expiry-ahora;
+      if(restante>0){
+        const h=Math.floor(restante/3600000);const m=Math.floor((restante%3600000)/60000);
+        demoBadge='<span class="demo-badge activa">DEMO</span>';
+        demoInfo=`<div style="font-size:11px;color:var(--warn);margin-top:4px">⏱ Vence en ${h}h ${m}m</div>`;
+      } else {
+        demoBadge='<span class="demo-badge vencida">VENCIDA</span>';
+        demoInfo='<div style="font-size:11px;color:var(--red);margin-top:4px">Demo vencida</div>';
+      }
+      demoActions=`<div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <input type="number" min="1" max="30" value="7" style="width:56px;padding:6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font)" data-ext-uid="${d.id}"/>
+        <button class="btn-aext" data-uid="${d.id}">⏱ Extender</button>
+        <button class="btn-aact" data-uid="${d.id}">✅ Activar</button>
+      </div>`;
+    }
+    return`<div class="admin-card">
+      <div class="admin-card-title">${u.nombre||u.email}${ban?'<span class="ban-badge">BANEADO</span>':''} ${demoBadge}</div>
+      <div class="admin-card-sub">${u.email||d.id}</div>
+      ${demoInfo}
+      <div class="admin-card-actions" style="margin-top:8px">
+        ${ban?`<button class="btn-aunban" data-uid="${d.id}">✅ Desbanear</button>`:`<button class="btn-aban" data-uid="${d.id}">🚫 Banear</button>`}
+        <button class="btn-adel" data-uid="${d.id}">🗑️ Eliminar</button>
+      </div>
+      ${demoActions}
+    </div>`;
+  }).join("");
 }
 async function loadAdminTareas(){
   const c=document.getElementById("admin-tareas-list");
@@ -426,9 +489,22 @@ async function loadAdminTareas(){
 
 document.getElementById("admin-users-list").addEventListener("click",async e=>{
   const ban=e.target.closest(".btn-aban");const unban=e.target.closest(".btn-aunban");const del=e.target.closest(".btn-adel[data-uid]");
+  const ext=e.target.closest(".btn-aext");const act=e.target.closest(".btn-aact");
   if(ban&&confirm("¿Banear este usuario?")){await setDoc(doc(db,"usuarios",ban.dataset.uid),{banned:true},{merge:true});toast("Usuario baneado");await loadAdminUsers();}
   if(unban){await setDoc(doc(db,"usuarios",unban.dataset.uid),{banned:false},{merge:true});toast("Usuario desbaneado");await loadAdminUsers();}
   if(del&&confirm("¿Eliminar este usuario?")){await deleteDoc(doc(db,"usuarios",del.dataset.uid));toast("Usuario eliminado");await loadAdminUsers();}
+  if(ext){
+    const dias=parseInt(document.querySelector(`input[data-ext-uid="${ext.dataset.uid}"]`)?.value)||7;
+    const snap=await getDoc(doc(db,"usuarios",ext.dataset.uid));const u=snap.data();
+    const baseMs=u.demoExpiry?.toMillis?.()||((u.demoStart?.toMillis?.()||Date.now())+86400000);
+    const nuevoExpiry=new Date(Math.max(baseMs,Date.now())+dias*86400000);
+    await setDoc(doc(db,"usuarios",ext.dataset.uid),{demoExpiry:Timestamp.fromDate(nuevoExpiry),status:"demo"},{merge:true});
+    toast(`Demo extendida ${dias} días`,"ok");await loadAdminUsers();
+  }
+  if(act&&confirm("¿Activar cuenta completa?")){
+    await setDoc(doc(db,"usuarios",act.dataset.uid),{status:"activo",demoExpiry:null},{merge:true});
+    toast("Cuenta activada","ok");await loadAdminUsers();
+  }
 });
 document.getElementById("atab-users").addEventListener("click",()=>{
   document.getElementById("admin-users-view").style.display="block";document.getElementById("admin-tareas-view").style.display="none";
@@ -442,18 +518,60 @@ document.getElementById("atab-tareas").addEventListener("click",()=>{
 });
 document.getElementById("btn-admin-exit").addEventListener("click",()=>{if(me)showScreen("screen-app");else showScreen("screen-login");});
 
+// ── DEMO HELPERS ──────────────────────────────────────────
+const DEMO_MS=24*60*60*1000;
+let userDoc=null;
+
+function getDemoRestante(data){
+  if(data.status==='activo')return Infinity;
+  const start=data.demoStart?.toMillis?.()||0;
+  const expiry=data.demoExpiry?.toMillis?.()||start+DEMO_MS;
+  return expiry-Date.now();
+}
+
+function checkDemo(){
+  if(!userDoc)return;
+  const restante=getDemoRestante(userDoc);
+  if(restante===Infinity)return;
+  if(restante<=0){document.getElementById('demo-wall').classList.add('open');return;}
+  const h=Math.floor(restante/3600000);
+  const m=Math.floor((restante%3600000)/60000);
+  const urgente=restante<3600000;
+  const cd=document.createElement('span');
+  cd.className='demo-countdown'+(urgente?' urgente':'');
+  cd.textContent='⏱ '+(h>0?h+'h '+m+'m':m+'m');
+  document.getElementById('header-right')?.appendChild(cd);
+}
+
+document.getElementById('btn-demo-logout').addEventListener('click',()=>signOut(auth));
+
 // ── AUTH STATE ────────────────────────────────────────────
 onAuthStateChanged(auth,async user=>{
   if(user){
     me=user;
-    await setDoc(doc(db,"usuarios",user.uid),{uid:user.uid,email:user.email,nombre:user.displayName||user.email.split("@")[0],updatedAt:serverTimestamp()},{merge:true});
+    const userRef=doc(db,"usuarios",user.uid);
+    const snap=await getDoc(userRef);
+    if(!snap.exists()){
+      await setDoc(userRef,{
+        uid:user.uid,email:user.email,
+        nombre:user.displayName||user.email.split("@")[0],
+        banned:false,status:"demo",demoStart:serverTimestamp(),
+        createdAt:serverTimestamp()
+      });
+    } else {
+      await setDoc(userRef,{uid:user.uid,email:user.email,nombre:user.displayName||user.email.split("@")[0],updatedAt:serverTimestamp()},{merge:true});
+    }
+    userDoc=(await getDoc(userRef)).data();
+    if(userDoc.banned){toast("Cuenta suspendida","err");await signOut(auth);return;}
     document.getElementById("header-saludo").textContent=user.displayName||user.email.split("@")[0];
     showScreen("screen-app");
     startFirestore();
     renderPage("resumen");
+    checkDemo();
   } else {
-    me=null;tasks=[];
+    me=null;userDoc=null;tasks=[];
     if(unsubTasks){unsubTasks();unsubTasks=null;}
+    document.getElementById('demo-wall').classList.remove('open');
     showScreen("screen-login");
   }
 });
