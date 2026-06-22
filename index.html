@@ -398,6 +398,7 @@ function toast(msg,type=""){
   setTimeout(()=>el.remove(),3000);
 }
 function emptyHTML(icon,msg,sub=""){return`<div class="empty"><div class="empty-icon">${icon}</div><div class="empty-msg">${msg}</div>${sub?`<div class="empty-sub">${sub}</div>`:""}</div>`;}
+function sanitizeHTML(str){const d=document.createElement("div");d.textContent=str??"";return d.innerHTML;}
 function getDaysLeft(d){const t=new Date();t.setHours(0,0,0,0);return Math.ceil((new Date(d+"T00:00:00")-t)/86400000);}
 function getUrgencia(days){
   if(days<0) return{bg:"#e2e8f0",text:"#64748b",barColor:"#94a3b8",label:"Vencido"};
