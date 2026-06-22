@@ -26,6 +26,7 @@
   --green-bg:#052e16;--warn-bg:#1c1000;--red-bg:#3f0f0f;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+.hidden{display:none!important}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;transition:background .2s,color .2s}
 input,select,button,textarea{font-family:var(--font)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
@@ -257,11 +258,13 @@ input,select,button,textarea{font-family:var(--font)}
   <nav class="app-nav">
     <button class="nav-btn active" data-page="resumen">📋 Resumen</button>
     <button class="nav-btn" data-page="agenda">🗓️ Agenda</button>
+    <button class="nav-btn" id="nav-grupal" data-page="grupal" style="display:none">👥 Grupal</button>
     <button class="nav-btn" data-page="nueva">➕ Nueva</button>
   </nav>
   <div class="app-body">
     <div id="page-resumen" class="page active"></div>
     <div id="page-agenda" class="page"></div>
+    <div id="page-grupal" class="page"></div>
     <div id="page-nueva" class="page"></div>
   </div>
 </div>
@@ -331,7 +334,7 @@ input,select,button,textarea{font-family:var(--font)}
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile,GoogleAuthProvider,signInWithPopup}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import{getFirestore,collection,doc,setDoc,getDoc,deleteDoc,onSnapshot,query,orderBy,serverTimestamp,getDocs,Timestamp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import{getFirestore,collection,doc,setDoc,addDoc,updateDoc,getDoc,deleteDoc,onSnapshot,query,orderBy,serverTimestamp,getDocs,Timestamp,arrayUnion,arrayRemove}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // 🔧 FIREBASE CONFIG
 const FB={
@@ -364,6 +367,10 @@ const DIAS=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 // ── ESTADO ────────────────────────────────────────────────
 let me=null,tasks=[],unsubTasks=null;
 let currentPage="resumen",delId=null;
+let grupoId=null,grupoData=null,grupoTasks=[],unsubGrupo=null,unsubGrupoTasks=null;
+let formGrupal={titulo:"",materia:"Matemática",tipo:"examen",fecha:"",descripcion:""};
+let mostrandoFormGrupal=false;
+let activeInviteGrupo=new URLSearchParams(window.location.search).get("inviteGrupo")||null;
 let calYear=new Date().getFullYear(),calMonth=new Date().getMonth(),selDay=null;
 let form={titulo:"",materia:"Matemática",tipo:"examen",fecha:"",descripcion:""};
 let logoTaps=0,logoTimer=null,pinBuf="";
@@ -428,7 +435,7 @@ function checkPin(){
   if(pinBuf===ADMIN_PIN){closePin();showScreen("screen-admin");loadAdminUsers();}
   else{document.getElementById("pin-err").style.display="block";pinBuf="";updDots();setTimeout(()=>document.getElementById("pin-err").style.display="none",1500);}
 }
-document.getElementById("btn-pin-close").addEventListener("click",closePin);
+document.getElementById("btn-pin-close").addEventListener("click",()=>closePin());
 document.getElementById("pin-overlay").addEventListener("click",e=>{if(e.target.id==="pin-overlay")closePin();});
 
 // ── ADMIN ─────────────────────────────────────────────────
@@ -470,6 +477,11 @@ async function loadAdminUsers(){
         <button class="btn-adel" data-uid="${d.id}">🗑️ Eliminar</button>
       </div>
       ${demoActions}
+      <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--muted)">Agenda grupal (límite de integrantes):</span>
+        <input type="number" min="1" max="20" value="${u.features?.limiteIntegrantes??1}" style="width:56px;padding:6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font)" data-lim-uid="${d.id}"/>
+        <button class="btn-alim" data-uid="${d.id}">💾 Guardar</button>
+      </div>
     </div>`;
   }).join("");
 }
@@ -490,6 +502,7 @@ async function loadAdminTareas(){
 document.getElementById("admin-users-list").addEventListener("click",async e=>{
   const ban=e.target.closest(".btn-aban");const unban=e.target.closest(".btn-aunban");const del=e.target.closest(".btn-adel[data-uid]");
   const ext=e.target.closest(".btn-aext");const act=e.target.closest(".btn-aact");
+  const lim=e.target.closest(".btn-alim");
   if(ban&&confirm("¿Banear este usuario?")){await setDoc(doc(db,"usuarios",ban.dataset.uid),{banned:true},{merge:true});toast("Usuario baneado");await loadAdminUsers();}
   if(unban){await setDoc(doc(db,"usuarios",unban.dataset.uid),{banned:false},{merge:true});toast("Usuario desbaneado");await loadAdminUsers();}
   if(del&&confirm("¿Eliminar este usuario?")){await deleteDoc(doc(db,"usuarios",del.dataset.uid));toast("Usuario eliminado");await loadAdminUsers();}
@@ -504,6 +517,14 @@ document.getElementById("admin-users-list").addEventListener("click",async e=>{
   if(act&&confirm("¿Activar cuenta completa?")){
     await setDoc(doc(db,"usuarios",act.dataset.uid),{status:"activo",demoExpiry:null},{merge:true});
     toast("Cuenta activada","ok");await loadAdminUsers();
+  }
+  if(lim){
+    const nuevoLimite=parseInt(document.querySelector(`input[data-lim-uid="${lim.dataset.uid}"]`)?.value)||1;
+    try{
+      await setDoc(doc(db,"usuarios",lim.dataset.uid),{features:{limiteIntegrantes:nuevoLimite}},{merge:true});
+      toast(`Límite de integrantes actualizado a ${nuevoLimite}`,"ok");
+      if(me&&me.uid===lim.dataset.uid){userDoc={...userDoc,features:{...userDoc.features,limiteIntegrantes:nuevoLimite}};actualizarNavGrupal();}
+    }catch(e){toast("Error al actualizar el límite","err");}
   }
 });
 document.getElementById("atab-users").addEventListener("click",()=>{
@@ -556,21 +577,28 @@ onAuthStateChanged(auth,async user=>{
         uid:user.uid,email:user.email,
         nombre:user.displayName||user.email.split("@")[0],
         banned:false,status:"demo",demoStart:serverTimestamp(),
-        createdAt:serverTimestamp()
+        createdAt:serverTimestamp(),
+        features:{limiteIntegrantes:1}
       });
     } else {
       await setDoc(userRef,{uid:user.uid,email:user.email,nombre:user.displayName||user.email.split("@")[0],updatedAt:serverTimestamp()},{merge:true});
     }
     userDoc=(await getDoc(userRef)).data();
     if(userDoc.banned){toast("Cuenta suspendida","err");await signOut(auth);return;}
+    grupoId=userDoc.grupoId||null;
+    if(activeInviteGrupo)await intentarUnirseAGrupo();
     document.getElementById("header-saludo").textContent=user.displayName||user.email.split("@")[0];
+    actualizarNavGrupal();
     showScreen("screen-app");
     startFirestore();
     renderPage("resumen");
     checkDemo();
   } else {
     me=null;userDoc=null;tasks=[];
+    grupoId=null;grupoData=null;grupoTasks=[];
     if(unsubTasks){unsubTasks();unsubTasks=null;}
+    if(unsubGrupo){unsubGrupo();unsubGrupo=null;}
+    if(unsubGrupoTasks){unsubGrupoTasks();unsubGrupoTasks=null;}
     document.getElementById('demo-wall').classList.remove('open');
     showScreen("screen-login");
   }
@@ -612,7 +640,7 @@ document.getElementById("btn-auth").addEventListener("click",async()=>{
   btn.disabled=false;btn.textContent=isRegister?"Crear cuenta →":"Ingresar →";
 });
 document.getElementById("btn-logout").addEventListener("click",()=>signOut(auth));
-document.getElementById("btn-theme").addEventListener("click",toggleTheme);
+document.getElementById("btn-theme").addEventListener("click",()=>toggleTheme());
 document.getElementById("btn-google").addEventListener("click",async()=>{
   const btn=document.getElementById("btn-google");
   btn.disabled=true;btn.textContent="Conectando...";
@@ -634,6 +662,7 @@ function startFirestore(){
     tasks=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderAll();
   });
+  if(grupoId)suscribirGrupo();
 }
 
 async function saveTask(){
@@ -655,6 +684,7 @@ function renderAll(){
   updateHeaderCount();
   if(currentPage==="resumen")renderResumen();
   else if(currentPage==="agenda")renderAgenda();
+  else if(currentPage==="grupal")renderGrupal();
   else if(currentPage==="nueva")renderNueva();
 }
 function updateHeaderCount(){
@@ -821,9 +851,261 @@ function renderPage(page){
   document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
   if(page==="resumen")renderResumen();
   else if(page==="agenda")renderAgenda();
+  else if(page==="grupal")renderGrupal();
   else if(page==="nueva")renderNueva();
 }
 document.querySelectorAll(".nav-btn[data-page]").forEach(b=>b.addEventListener("click",()=>renderPage(b.dataset.page)));
+
+// ── AGENDA GRUPAL (plus pago) ─────────────────────────────
+function tieneGrupoHabilitado(){return (userDoc?.features?.limiteIntegrantes??1) > 1;}
+function actualizarNavGrupal(){
+  document.getElementById("nav-grupal").style.display=(tieneGrupoHabilitado()||grupoId)?"":"none";
+}
+function limpiarURLInvite(){window.history.replaceState({},"",window.location.pathname);}
+
+async function intentarUnirseAGrupo(){
+  if(!activeInviteGrupo)return;
+  try{
+    const invRef=doc(db,"invitacionesGrupo",activeInviteGrupo);
+    const invSnap=await getDoc(invRef);
+    if(!invSnap.exists()){toast("El link de invitación no es válido","err");activeInviteGrupo=null;limpiarURLInvite();return;}
+    const inv=invSnap.data();
+    if(inv.usado){toast("Ese link ya fue usado","err");activeInviteGrupo=null;limpiarURLInvite();return;}
+    if(userDoc.grupoId){toast("Ya formás parte de una agenda grupal","warn");activeInviteGrupo=null;limpiarURLInvite();return;}
+    const grupoRef=doc(db,"grupos",inv.grupoId);
+    const grupoSnap=await getDoc(grupoRef);
+    if(!grupoSnap.exists()){toast("El grupo ya no existe","err");activeInviteGrupo=null;limpiarURLInvite();return;}
+    const grupo=grupoSnap.data();
+    const ownerSnap=await getDoc(doc(db,"usuarios",grupo.ownerUid));
+    const limite=ownerSnap.data()?.features?.limiteIntegrantes??1;
+    if((grupo.miembros||[]).length>=limite){
+      toast("Este grupo ya alcanzó su límite de integrantes","err");activeInviteGrupo=null;limpiarURLInvite();return;
+    }
+    await updateDoc(grupoRef,{miembros:arrayUnion(me.uid)});
+    await setDoc(doc(db,"usuarios",me.uid),{grupoId:inv.grupoId},{merge:true});
+    await updateDoc(invRef,{usado:true,usadoPor:me.email,usadoAt:serverTimestamp()});
+    userDoc.grupoId=inv.grupoId;grupoId=inv.grupoId;
+    toast(`Te uniste a "${grupo.nombre}" 🎉`,"ok");
+  }catch(e){console.error("Error al unirse al grupo:",e);toast("Error al unirse al grupo","err");}
+  activeInviteGrupo=null;limpiarURLInvite();
+}
+
+async function crearGrupo(nombre){
+  if(!nombre||!nombre.trim()){toast("Ponele un nombre al grupo","err");return;}
+  try{
+    const ref=await addDoc(collection(db,"grupos"),{ownerUid:me.uid,nombre:nombre.trim(),miembros:[me.uid],createdAt:serverTimestamp()});
+    await setDoc(doc(db,"usuarios",me.uid),{grupoId:ref.id},{merge:true});
+    userDoc.grupoId=ref.id;grupoId=ref.id;
+    toast("Agenda grupal creada 🎉","ok");
+    suscribirGrupo();
+    actualizarNavGrupal();
+    renderPage("grupal");
+  }catch(e){console.error("Error al crear el grupo:",e);toast("Error al crear el grupo","err");}
+}
+
+function suscribirGrupo(){
+  if(!grupoId)return;
+  if(unsubGrupo)unsubGrupo();
+  unsubGrupo=onSnapshot(doc(db,"grupos",grupoId),snap=>{
+    if(!snap.exists()){
+      grupoId=null;if(userDoc)userDoc.grupoId=null;grupoData=null;grupoTasks=[];
+      if(unsubGrupoTasks){unsubGrupoTasks();unsubGrupoTasks=null;}
+      toast("La agenda grupal fue eliminada","warn");
+      actualizarNavGrupal();
+      if(currentPage==="grupal")renderPage("resumen");
+      return;
+    }
+    grupoData=snap.data();
+    actualizarNavGrupal();
+    if(currentPage==="grupal")renderGrupal();
+  });
+  if(unsubGrupoTasks)unsubGrupoTasks();
+  const q=query(collection(db,"grupos",grupoId,"tareas"),orderBy("fecha","asc"));
+  unsubGrupoTasks=onSnapshot(q,snap=>{
+    grupoTasks=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(currentPage==="grupal")renderGrupal();
+  });
+}
+
+async function generarInviteGrupo(){
+  if(!grupoId)return;
+  try{
+    const ref=await addDoc(collection(db,"invitacionesGrupo"),{
+      grupoId,grupoNombre:grupoData?.nombre||"Agenda grupal",
+      creadoPorUid:me.uid,creadoPorNombre:userDoc.nombre||me.email,
+      usado:false,createdAt:serverTimestamp()
+    });
+    const url=`${window.location.origin}${window.location.pathname}?inviteGrupo=${ref.id}`;
+    renderInviteResult(url);
+  }catch(e){console.error("Error al generar el link:",e);toast("Error al generar el link","err");}
+}
+
+function renderInviteResult(url){
+  const el=document.getElementById("invite-result");
+  if(!el)return;
+  const texto=encodeURIComponent(`Te invito a sumarte a nuestra agenda grupal "${grupoData?.nombre||""}" en MiAgenda: ${url}`);
+  el.innerHTML=`<div class="card" style="font-size:13px">
+    <div style="word-break:break-all;margin-bottom:10px;color:var(--muted)">${url}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-sm" id="btn-copiar-invite" style="flex:1">📋 Copiar link</button>
+      <a href="https://wa.me/?text=${texto}" target="_blank" class="btn-sm gold" style="flex:1;text-align:center;text-decoration:none">📲 Compartir por WhatsApp</a>
+    </div>
+  </div>`;
+  el.querySelector("#btn-copiar-invite").addEventListener("click",()=>{
+    navigator.clipboard.writeText(url).then(()=>toast("Link copiado","ok")).catch(()=>toast("No se pudo copiar","err"));
+  });
+}
+
+async function saveTaskGrupal(){
+  if(!formGrupal.titulo||!formGrupal.fecha||!grupoId)return;
+  const nombre=userDoc.nombre||me.email.split("@")[0];
+  try{
+    await addDoc(collection(db,"grupos",grupoId,"tareas"),{
+      ...formGrupal,
+      ultimaAccionPorUid:me.uid,ultimaAccionPorNombre:nombre,
+      createdAt:serverTimestamp(),updatedAt:serverTimestamp()
+    });
+    toast("Actividad grupal guardada","ok");
+    formGrupal={titulo:"",materia:"Matemática",tipo:"examen",fecha:"",descripcion:""};
+    mostrandoFormGrupal=false;
+    renderGrupal();
+  }catch(e){console.error("Error al guardar actividad grupal:",e);toast("Error al guardar","err");}
+}
+
+async function deleteTaskGrupal(id){
+  try{
+    await deleteDoc(doc(db,"grupos",grupoId,"tareas",id));
+    toast("Actividad grupal eliminada");
+  }catch(e){console.error("Error al eliminar actividad grupal:",e);toast("Error al eliminar","err");}
+}
+
+async function salirDelGrupo(){
+  if(!confirm("¿Salir de la agenda grupal?"))return;
+  try{
+    await updateDoc(doc(db,"grupos",grupoId),{miembros:arrayRemove(me.uid)});
+    await setDoc(doc(db,"usuarios",me.uid),{grupoId:null},{merge:true});
+    userDoc.grupoId=null;grupoId=null;grupoData=null;grupoTasks=[];
+    if(unsubGrupo){unsubGrupo();unsubGrupo=null;}
+    if(unsubGrupoTasks){unsubGrupoTasks();unsubGrupoTasks=null;}
+    toast("Saliste del grupo");
+    actualizarNavGrupal();renderPage("resumen");
+  }catch(e){console.error("Error al salir del grupo:",e);toast("Error al salir del grupo","err");}
+}
+
+async function eliminarGrupoCompleto(){
+  if(!confirm("¿Eliminar la agenda grupal para todos los integrantes? Esta acción no se puede deshacer."))return;
+  try{
+    const tareasSnap=await getDocs(collection(db,"grupos",grupoId,"tareas"));
+    await Promise.all(tareasSnap.docs.map(d=>deleteDoc(d.ref)));
+    const miembros=grupoData?.miembros||[me.uid];
+    await Promise.all(miembros.map(uid=>setDoc(doc(db,"usuarios",uid),{grupoId:null},{merge:true})));
+    await deleteDoc(doc(db,"grupos",grupoId));
+    if(unsubGrupo){unsubGrupo();unsubGrupo=null;}
+    if(unsubGrupoTasks){unsubGrupoTasks();unsubGrupoTasks=null;}
+    userDoc.grupoId=null;grupoId=null;grupoData=null;grupoTasks=[];
+    toast("Agenda grupal eliminada");
+    actualizarNavGrupal();renderPage("resumen");
+  }catch(e){console.error("Error al eliminar el grupo:",e);toast("Error al eliminar el grupo","err");}
+}
+
+function renderGrupal(){
+  const el=document.getElementById("page-grupal");
+  if(!grupoId){
+    if(!tieneGrupoHabilitado()){
+      el.innerHTML=emptyHTML("🔒","Agenda grupal","Esta función es un plus que todavía no está activado en tu cuenta. Contactanos para sumarlo.");
+      return;
+    }
+    el.innerHTML=`
+      <div class="sec-title" style="font-size:17px;margin-bottom:16px">Crear agenda grupal 👥</div>
+      <div class="card">
+        <div class="field"><label>Nombre del grupo *</label><input id="f-grupo-nombre" placeholder="Ej: Familia López, 5to B..."/></div>
+        <button class="btn-sm gold" id="btn-crear-grupo" style="width:100%;justify-content:center;padding:13px;font-size:15px">Crear agenda grupal 🚀</button>
+      </div>`;
+    el.querySelector("#btn-crear-grupo").addEventListener("click",()=>crearGrupo(document.getElementById("f-grupo-nombre").value));
+    return;
+  }
+  const soyDueno=grupoData?.ownerUid===me.uid;
+  const miembrosCount=(grupoData?.miembros||[]).length;
+  el.innerHTML=`
+    <div class="sec-header">
+      <span class="sec-title" style="font-size:17px">👥 ${sanitizeHTML(grupoData?.nombre||"Agenda grupal")}</span>
+      <button class="btn-sm" id="btn-invitar-grupo">📤 Invitar</button>
+    </div>
+    <div class="card" style="font-size:13px;color:var(--muted);margin-bottom:14px">${miembrosCount} integrante${miembrosCount!==1?"s":""} en esta agenda</div>
+    <div id="invite-result"></div>
+    <button class="btn-sm gold" id="btn-nueva-grupal" style="width:100%;justify-content:center;padding:12px;margin-bottom:14px">＋ Nueva actividad grupal</button>
+    <div id="form-grupal-wrap"></div>
+    ${grupoTasks.length===0?emptyHTML("🗓️","Sin actividades grupales todavía"):grupoTasks.map(t=>tareaGrupalCardHTML(t)).join("")}
+    <div class="card" style="margin-top:16px">
+      ${soyDueno?`<button class="btn-sm danger" id="btn-eliminar-grupo" style="width:100%;justify-content:center">🗑️ Eliminar agenda grupal</button>`
+                :`<button class="btn-sm danger" id="btn-salir-grupo" style="width:100%;justify-content:center">🚪 Salir del grupo</button>`}
+    </div>`;
+  el.querySelector("#btn-invitar-grupo").addEventListener("click",()=>generarInviteGrupo());
+  el.querySelector("#btn-nueva-grupal").addEventListener("click",()=>{
+    mostrandoFormGrupal=!mostrandoFormGrupal;
+    if(mostrandoFormGrupal)renderFormGrupal();else document.getElementById("form-grupal-wrap").innerHTML="";
+  });
+  if(mostrandoFormGrupal)renderFormGrupal();
+  el.querySelectorAll("[data-del-grupal]").forEach(b=>b.addEventListener("click",()=>{if(confirm("¿Eliminar esta actividad grupal?"))deleteTaskGrupal(b.dataset.delGrupal);}));
+  el.querySelector("#btn-eliminar-grupo")?.addEventListener("click",()=>eliminarGrupoCompleto());
+  el.querySelector("#btn-salir-grupo")?.addEventListener("click",()=>salirDelGrupo());
+}
+
+function tareaGrupalCardHTML(t){
+  const tipo=getTipo(t.tipo);
+  const dias=getDaysLeft(t.fecha);
+  const urg=getUrgencia(dias);
+  const inicial=(t.ultimaAccionPorNombre||"?").trim().charAt(0).toUpperCase();
+  return`<div class="tarea-card">
+    <div class="tarea-bar" style="background:${tipo.color}"></div>
+    <div class="tarea-body">
+      <div class="tarea-top">
+        <div class="tarea-info">
+          <div class="tarea-titulo">${sanitizeHTML(t.titulo)}</div>
+          <div class="tarea-meta">
+            <span class="tarea-tag" style="background:${tipo.bg};color:${tipo.color}">${tipo.label}</span>
+            <span class="tarea-fecha">${fmtFecha(t.fecha)}</span>
+          </div>
+          ${t.descripcion?`<div class="tarea-desc">${sanitizeHTML(t.descripcion)}</div>`:""}
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">Materia: ${sanitizeHTML(t.materia)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div title="Última modificación: ${sanitizeHTML(t.ultimaAccionPorNombre||"")}" style="width:26px;height:26px;border-radius:50%;background:var(--red);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${sanitizeHTML(inicial)}</div>
+          <div class="urgencia-badge" style="background:${urg.bg}"><div class="urgencia-num" style="color:${urg.text}">${dias}</div><div class="urgencia-lbl" style="color:${urg.text}">días</div></div>
+        </div>
+      </div>
+      <div style="margin-top:10px;display:flex;justify-content:flex-end">
+        <button class="btn-sm danger" data-del-grupal="${t.id}" style="font-size:12px;padding:6px 12px">🗑️ Eliminar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderFormGrupal(){
+  const el=document.getElementById("form-grupal-wrap");
+  if(!el)return;
+  el.innerHTML=`
+    <div class="card">
+      <div class="field" style="margin-bottom:10px"><label>Tipo de actividad</label>
+        <div class="tipos-grid">
+          ${TIPOS.map(t=>`<button class="tipo-btn${formGrupal.tipo===t.id?" active":""}" data-tipo="${t.id}" style="${formGrupal.tipo===t.id?`border-color:${t.color};background:${t.bg};color:${t.color}`:""}">${t.label}</button>`).join("")}
+        </div>
+      </div>
+      <div class="field"><label>Materia</label>
+        <select id="fg-materia">${MATERIAS.map(m=>`<option value="${m}"${formGrupal.materia===m?" selected":""}>${m}</option>`).join("")}</select>
+      </div>
+      <div class="field"><label>Título / Tema *</label><input id="fg-titulo" value="${sanitizeHTML(formGrupal.titulo)}" placeholder="Ej: Cumpleaños de la abuela, reunión de curso..."/></div>
+      <div class="field"><label>Fecha *</label><input id="fg-fecha" type="date" value="${formGrupal.fecha}" min="${todayStr}"/></div>
+      <div class="field"><label>Notas <span style="color:var(--muted);font-weight:400">(opcional)</span></label><textarea id="fg-desc" rows="3">${sanitizeHTML(formGrupal.descripcion)}</textarea></div>
+      <button class="btn-sm gold" id="btn-save-task-grupal" style="width:100%;justify-content:center;padding:13px;font-size:15px">Guardar actividad grupal 🚀</button>
+    </div>`;
+  el.querySelectorAll(".tipo-btn[data-tipo]").forEach(btn=>btn.addEventListener("click",()=>{formGrupal.tipo=btn.dataset.tipo;renderFormGrupal();}));
+  el.querySelector("#fg-materia").addEventListener("change",e=>formGrupal.materia=e.target.value);
+  el.querySelector("#fg-titulo").addEventListener("input",e=>formGrupal.titulo=e.target.value);
+  el.querySelector("#fg-fecha").addEventListener("change",e=>formGrupal.fecha=e.target.value);
+  el.querySelector("#fg-desc").addEventListener("input",e=>formGrupal.descripcion=e.target.value);
+  el.querySelector("#btn-save-task-grupal").addEventListener("click",()=>{if(formGrupal.titulo&&formGrupal.fecha)saveTaskGrupal();else toast("Completá título y fecha","warn");});
+}
 
 // ── ELIMINAR ──────────────────────────────────────────────
 function openDel(id){delId=id;document.getElementById("modal-del").classList.add("open");}
@@ -838,18 +1120,59 @@ FIRESTORE SECURITY RULES
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function esAdmin() {
+      return request.auth.token.email == 'rgaraventa@gmail.com';
+    }
+    function cupoDisponible(grupo) {
+      return get(/databases/$(database)/documents/usuarios/$(grupo.ownerUid)).data.features.limiteIntegrantes > grupo.miembros.size();
+    }
+
     match /usuarios/{userId} {
-      allow read, write: if request.auth != null;
+      // Antes "write" estaba abierto a CUALQUIER usuario autenticado sobre CUALQUIER cuenta — se restringe a uno mismo o al admin
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && (request.auth.uid == userId || esAdmin());
+      allow delete: if request.auth != null && esAdmin();
 
       match /tareas/{tareaId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+    }
+
+    match /grupos/{grupoId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.miembros;
+      allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.ownerUid ||
+        request.auth.uid in resource.data.miembros ||
+        (
+          request.resource.data.miembros == resource.data.miembros.concat([request.auth.uid]) &&
+          cupoDisponible(resource.data)
+        )
+      );
+      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+
+      match /tareas/{tareaId} {
+        allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/grupos/$(grupoId)).data.miembros;
+      }
+    }
+
+    match /invitacionesGrupo/{id} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
     }
   }
 }
 
 ÍNDICES COMPUESTOS
 1. usuarios/{uid}/tareas | fecha ASC
+2. grupos/{id}/tareas    | fecha ASC (sin índice compuesto necesario, es orden simple)
+
+NOTA IMPORTANTE PARA RUBÉN:
+- "esAdmin()" asume que administrás MiAgenda con la cuenta rgaraventa@gmail.com, igual que el resto del portfolio. Si usás otra cuenta, avisame y la cambiamos.
+- El límite de integrantes del grupo se valida también en el SERVIDOR (no solo en la pantalla): cuando alguien acepta una invitación, Firestore chequea en tiempo real cuántos integrantes tiene el grupo contra el límite configurado en la cuenta de quien lo creó.
 -->
 </body>
 </html>
