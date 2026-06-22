@@ -369,11 +369,11 @@ const DIAS=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 let me=null,tasks=[],unsubTasks=null;
 let currentPage="resumen",delId=null;
 let grupoId=null,grupoData=null,grupoTasks=[],unsubGrupo=null,unsubGrupoTasks=null;
-let formGrupal={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",descripcion:""};
+let formGrupal={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",hora:"",descripcion:""};
 let mostrandoFormGrupal=false;
 let activeInviteGrupo=new URLSearchParams(window.location.search).get("inviteGrupo")||null;
 let calYear=new Date().getFullYear(),calMonth=new Date().getMonth(),selDay=null;
-let form={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",descripcion:""};
+let form={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",hora:"",descripcion:""};
 let logoTaps=0,logoTimer=null,pinBuf="";
 let isRegister=false;
 const todayStr=new Date().toISOString().split("T")[0];
@@ -410,6 +410,7 @@ function getUrgencia(days){
 }
 function getTipo(id){return TIPOS.find(t=>t.id===id)||TIPOS[0];}
 function fmtFecha(d){return new Date(d+"T00:00:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});}
+function fmtFechaHora(t){return t.hora?`${fmtFecha(t.fecha)} · 🕐 ${t.hora}`:fmtFecha(t.fecha);}
 
 // ── LOGO TAPS ─────────────────────────────────────────────
 ["login-logo","app-logo"].forEach(id=>{
@@ -672,7 +673,7 @@ async function saveTask(){
   const id=Date.now().toString();
   await setDoc(doc(db,"usuarios",me.uid,"tareas",id),{...form,creadoEn:serverTimestamp()});
   toast("Actividad guardada","ok");
-  form={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",descripcion:""};
+  form={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",hora:"",descripcion:""};
   renderPage("resumen");
 }
 
@@ -695,40 +696,54 @@ function updateHeaderCount(){
 }
 
 // ── RESUMEN ───────────────────────────────────────────────
+function tareaResumenCardHTML(t,esGrupal){
+  const tipo=getTipo(t.tipo);const urg=getUrgencia(t.dl);const hot=t.dl<=1;
+  const inicial=esGrupal?(t.ultimaAccionPorNombre||"?").trim().charAt(0).toUpperCase():"";
+  return`<div class="tarea-card">
+    <div class="tarea-bar" style="background:${urg.barColor}"></div>
+    <div class="tarea-body">
+      <div class="tarea-top">
+        <div class="tarea-info">
+          <div class="tarea-meta">
+            <span class="tarea-tag" style="background:${tipo.bg};color:${tipo.color}">${tipoLabel(t)}</span>
+            <span class="tarea-tag" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border)">${t.materia}</span>
+          </div>
+          <div class="tarea-titulo">${t.titulo}</div>
+          ${t.descripcion?`<div class="tarea-desc">${t.descripcion}</div>`:""}
+          <div class="tarea-fecha">📅 ${fmtFechaHora(t)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          ${esGrupal?`<div title="Última modificación: ${sanitizeHTML(t.ultimaAccionPorNombre||"")}" style="width:24px;height:24px;border-radius:50%;background:var(--red);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${sanitizeHTML(inicial)}</div>`:""}
+          <div class="urgencia-badge ${hot?"blink":""}" style="background:${urg.bg};color:${urg.text}">
+            <div class="urgencia-num">${t.dl===0?"¡HOY!":t.dl}</div>
+            ${t.dl>0?`<div class="urgencia-lbl">días</div>`:""}
+          </div>
+          <button class="btn-sm danger" ${esGrupal?`data-del-grupal-resumen="${t.id}"`:`data-del="${t.id}"`} style="width:100%;padding:5px;justify-content:center">🗑</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderResumen(){
   const el=document.getElementById("page-resumen");
   const upcoming=tasks.map(t=>({...t,dl:getDaysLeft(t.fecha)})).filter(t=>t.dl>=0).sort((a,b)=>a.dl-b.dl);
   const past=tasks.map(t=>({...t,dl:getDaysLeft(t.fecha)})).filter(t=>t.dl<0).sort((a,b)=>b.dl-a.dl);
-  let html=`<div class="sec-header"><span class="sec-title" style="font-size:17px">Próximas actividades</span></div>`;
+  let html="";
+
+  if(grupoId){
+    const upcomingG=grupoTasks.map(t=>({...t,dl:getDaysLeft(t.fecha)})).filter(t=>t.dl>=0).sort((a,b)=>a.dl-b.dl);
+    html+=`<div class="sec-header"><span class="sec-title" style="font-size:17px">👥 ${sanitizeHTML(grupoData?.nombre||"Agenda grupal")}</span></div>`;
+    html+=upcomingG.length===0?emptyHTML("🎉","¡Sin pendientes en el grupo!","No hay actividades grupales próximas"):upcomingG.map(t=>tareaResumenCardHTML(t,true)).join("");
+    html+=`<div class="sec-header" style="margin-top:24px"><span class="sec-title" style="font-size:17px">🙋 Mi agenda personal</span></div>`;
+  } else {
+    html+=`<div class="sec-header"><span class="sec-title" style="font-size:17px">Próximas actividades</span></div>`;
+  }
+
   if(upcoming.length===0){
     html+=emptyHTML("🎉","¡Todo al día!","No tenés actividades pendientes");
   } else {
-    html+=upcoming.map(t=>{
-      const tipo=getTipo(t.tipo);const urg=getUrgencia(t.dl);const hot=t.dl<=1;
-      return`<div class="tarea-card">
-        <div class="tarea-bar" style="background:${urg.barColor}"></div>
-        <div class="tarea-body">
-          <div class="tarea-top">
-            <div class="tarea-info">
-              <div class="tarea-meta">
-                <span class="tarea-tag" style="background:${tipo.bg};color:${tipo.color}">${tipoLabel(t)}</span>
-                <span class="tarea-tag" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border)">${t.materia}</span>
-              </div>
-              <div class="tarea-titulo">${t.titulo}</div>
-              ${t.descripcion?`<div class="tarea-desc">${t.descripcion}</div>`:""}
-              <div class="tarea-fecha">📅 ${fmtFecha(t.fecha)}</div>
-            </div>
-            <div>
-              <div class="urgencia-badge ${hot?"blink":""}" style="background:${urg.bg};color:${urg.text}">
-                <div class="urgencia-num">${t.dl===0?"¡HOY!":t.dl}</div>
-                ${t.dl>0?`<div class="urgencia-lbl">días</div>`:""}
-              </div>
-              <button class="btn-sm danger" data-del="${t.id}" style="width:100%;margin-top:6px;padding:5px;justify-content:center">🗑</button>
-            </div>
-          </div>
-        </div>
-      </div>`;
-    }).join("");
+    html+=upcoming.map(t=>tareaResumenCardHTML(t,false)).join("");
   }
 
   // Leyenda
@@ -750,6 +765,7 @@ function renderResumen(){
 
   el.innerHTML=html;
   el.querySelectorAll("[data-del]").forEach(btn=>btn.addEventListener("click",()=>openDel(btn.dataset.del)));
+  el.querySelectorAll("[data-del-grupal-resumen]").forEach(btn=>btn.addEventListener("click",()=>{if(confirm("¿Eliminar esta actividad grupal?"))deleteTaskGrupal(btn.dataset.delGrupalResumen);}));
 }
 
 // ── AGENDA ───────────────────────────────────────────────
@@ -793,7 +809,7 @@ function renderAgenda(){
     detalle=`<div class="card">
       <div class="sec-title" style="margin-bottom:12px">${selDay} de ${MESES[calMonth]}</div>
       ${dt.length===0?`<div style="text-align:center;padding:16px;color:var(--muted);font-size:14px">Sin actividades este día</div>`:
-      dt.map(t=>{const tipo=getTipo(t.tipo);const urg=getUrgencia(getDaysLeft(t.fecha));return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${tipo.bg};border-radius:var(--radius-sm);margin-bottom:8px;border-left:4px solid ${tipo.color}"><div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--text)">${t.titulo}</div><div style="font-size:12px;color:var(--muted)">${t.materia} · ${tipoLabel(t)}</div></div><span style="background:${urg.bg};color:${urg.text};font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px">${urg.label}</span></div>`;}).join("")}
+      dt.map(t=>{const tipo=getTipo(t.tipo);const urg=getUrgencia(getDaysLeft(t.fecha));return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${tipo.bg};border-radius:var(--radius-sm);margin-bottom:8px;border-left:4px solid ${tipo.color}"><div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--text)">${t.titulo}${t.hora?` · 🕐 ${t.hora}`:""}</div><div style="font-size:12px;color:var(--muted)">${t.materia} · ${tipoLabel(t)}</div></div><span style="background:${urg.bg};color:${urg.text};font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px">${urg.label}</span></div>`;}).join("")}
     </div>`;
   }
 
@@ -830,6 +846,9 @@ function renderNueva(){
         <input id="f-fecha" type="date" value="${form.fecha}" min="${todayStr}"/>
         ${urgPreview}
       </div>
+      <div class="field"><label>Hora <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
+        <input id="f-hora" type="time" value="${form.hora||""}"/>
+      </div>
       <div class="field"><label>Notas <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
         <textarea id="f-desc" rows="3" placeholder="Temas, capítulos, materiales...">${form.descripcion}</textarea>
       </div>
@@ -843,6 +862,7 @@ function renderNueva(){
   el.querySelector("#f-materia").addEventListener("change",e=>form.materia=e.target.value);
   el.querySelector("#f-titulo").addEventListener("input",e=>{form.titulo=e.target.value;});
   el.querySelector("#f-fecha").addEventListener("change",e=>{form.fecha=e.target.value;renderNueva();});
+  el.querySelector("#f-hora").addEventListener("change",e=>form.hora=e.target.value);
   el.querySelector("#f-desc").addEventListener("input",e=>form.descripcion=e.target.value);
   el.querySelector("#btn-save-task").addEventListener("click",()=>{if(form.titulo&&form.fecha)saveTask();else toast("Completá título y fecha","warn");});
 }
@@ -874,12 +894,12 @@ async function intentarUnirseAGrupo(){
     const invSnap=await getDoc(invRef);
     if(!invSnap.exists()){toast("El link de invitación no es válido","err");activeInviteGrupo=null;limpiarURLInvite();return;}
     const inv=invSnap.data();
-    if(inv.usado){toast("Ese link ya fue usado","err");activeInviteGrupo=null;limpiarURLInvite();return;}
     if(userDoc.grupoId){toast("Ya formás parte de una agenda grupal","warn");activeInviteGrupo=null;limpiarURLInvite();return;}
     const grupoRef=doc(db,"grupos",inv.grupoId);
     const grupoSnap=await getDoc(grupoRef);
     if(!grupoSnap.exists()){toast("El grupo ya no existe","err");activeInviteGrupo=null;limpiarURLInvite();return;}
     const grupo=grupoSnap.data();
+    if((grupo.miembros||[]).includes(me.uid)){toast("Ya formás parte de este grupo","warn");activeInviteGrupo=null;limpiarURLInvite();return;}
     const ownerSnap=await getDoc(doc(db,"usuarios",grupo.ownerUid));
     const limite=ownerSnap.data()?.features?.limiteIntegrantes??1;
     if((grupo.miembros||[]).length>=limite){
@@ -887,7 +907,8 @@ async function intentarUnirseAGrupo(){
     }
     await updateDoc(grupoRef,{miembros:arrayUnion(me.uid)});
     await setDoc(doc(db,"usuarios",me.uid),{grupoId:inv.grupoId},{merge:true});
-    await updateDoc(invRef,{usado:true,usadoPor:me.email,usadoAt:serverTimestamp()});
+    // El link queda activo para que lo puedan usar otras personas también, hasta llegar al límite del grupo
+    await updateDoc(invRef,{ultimoUsadoPor:me.email,ultimoUsadoAt:serverTimestamp()});
     userDoc.grupoId=inv.grupoId;grupoId=inv.grupoId;
     toast(`Te uniste a "${grupo.nombre}" 🎉`,"ok");
   }catch(e){console.error("Error al unirse al grupo:",e);toast("Error al unirse al grupo","err");}
@@ -922,12 +943,14 @@ function suscribirGrupo(){
     grupoData=snap.data();
     actualizarNavGrupal();
     if(currentPage==="grupal")renderGrupal();
+    if(currentPage==="resumen")renderResumen();
   });
   if(unsubGrupoTasks)unsubGrupoTasks();
   const q=query(collection(db,"grupos",grupoId,"tareas"),orderBy("fecha","asc"));
   unsubGrupoTasks=onSnapshot(q,snap=>{
     grupoTasks=snap.docs.map(d=>({id:d.id,...d.data()}));
     if(currentPage==="grupal")renderGrupal();
+    if(currentPage==="resumen")renderResumen();
   });
 }
 
@@ -937,7 +960,7 @@ async function generarInviteGrupo(){
     const ref=await addDoc(collection(db,"invitacionesGrupo"),{
       grupoId,grupoNombre:grupoData?.nombre||"Agenda grupal",
       creadoPorUid:me.uid,creadoPorNombre:userDoc.nombre||me.email,
-      usado:false,createdAt:serverTimestamp()
+      createdAt:serverTimestamp()
     });
     const url=`${window.location.origin}${window.location.pathname}?inviteGrupo=${ref.id}`;
     renderInviteResult(url);
@@ -970,7 +993,7 @@ async function saveTaskGrupal(){
       createdAt:serverTimestamp(),updatedAt:serverTimestamp()
     });
     toast("Actividad grupal guardada","ok");
-    formGrupal={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",descripcion:""};
+    formGrupal={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",hora:"",descripcion:""};
     mostrandoFormGrupal=false;
     renderGrupal();
   }catch(e){console.error("Error al guardar actividad grupal:",e);toast("Error al guardar","err");}
@@ -1068,7 +1091,7 @@ function tareaGrupalCardHTML(t){
           <div class="tarea-titulo">${sanitizeHTML(t.titulo)}</div>
           <div class="tarea-meta">
             <span class="tarea-tag" style="background:${tipo.bg};color:${tipo.color}">${tipoLabel(t)}</span>
-            <span class="tarea-fecha">${fmtFecha(t.fecha)}</span>
+            <span class="tarea-fecha">${fmtFechaHora(t)}</span>
           </div>
           ${t.descripcion?`<div class="tarea-desc">${sanitizeHTML(t.descripcion)}</div>`:""}
           <div style="font-size:11px;color:var(--muted);margin-top:6px">Materia: ${sanitizeHTML(t.materia)}</div>
@@ -1101,6 +1124,7 @@ function renderFormGrupal(){
       </div>
       <div class="field"><label>Título / Tema *</label><input id="fg-titulo" value="${sanitizeHTML(formGrupal.titulo)}" placeholder="Ej: Cumpleaños de la abuela, reunión de curso..."/></div>
       <div class="field"><label>Fecha *</label><input id="fg-fecha" type="date" value="${formGrupal.fecha}" min="${todayStr}"/></div>
+      <div class="field"><label>Hora <span style="color:var(--muted);font-weight:400">(opcional)</span></label><input id="fg-hora" type="time" value="${formGrupal.hora||""}"/></div>
       <div class="field"><label>Notas <span style="color:var(--muted);font-weight:400">(opcional)</span></label><textarea id="fg-desc" rows="3">${sanitizeHTML(formGrupal.descripcion)}</textarea></div>
       <button class="btn-sm gold" id="btn-save-task-grupal" style="width:100%;justify-content:center;padding:13px;font-size:15px">Guardar actividad grupal 🚀</button>
     </div>`;
@@ -1109,6 +1133,7 @@ function renderFormGrupal(){
   el.querySelector("#fg-materia").addEventListener("change",e=>formGrupal.materia=e.target.value);
   el.querySelector("#fg-titulo").addEventListener("input",e=>formGrupal.titulo=e.target.value);
   el.querySelector("#fg-fecha").addEventListener("change",e=>formGrupal.fecha=e.target.value);
+  el.querySelector("#fg-hora").addEventListener("change",e=>formGrupal.hora=e.target.value);
   el.querySelector("#fg-desc").addEventListener("input",e=>formGrupal.descripcion=e.target.value);
   el.querySelector("#btn-save-task-grupal").addEventListener("click",()=>{if(formGrupal.titulo&&formGrupal.fecha)saveTaskGrupal();else toast("Completá título y fecha","warn");});
 }
