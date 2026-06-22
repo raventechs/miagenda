@@ -371,6 +371,7 @@ let currentPage="resumen",delId=null;
 let grupoId=null,grupoData=null,grupoTasks=[],unsubGrupo=null,unsubGrupoTasks=null;
 let formGrupal={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",hora:"",descripcion:""};
 let mostrandoFormGrupal=false;
+let editandoGrupalId=null;
 let activeInviteGrupo=new URLSearchParams(window.location.search).get("inviteGrupo")||null;
 let calYear=new Date().getFullYear(),calMonth=new Date().getMonth(),selDay=null;
 let form={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",hora:"",descripcion:""};
@@ -987,16 +988,35 @@ async function saveTaskGrupal(){
   if(!formGrupal.titulo||!formGrupal.fecha||!grupoId)return;
   const nombre=userDoc.nombre||me.email.split("@")[0];
   try{
-    await addDoc(collection(db,"grupos",grupoId,"tareas"),{
-      ...formGrupal,
-      ultimaAccionPorUid:me.uid,ultimaAccionPorNombre:nombre,
-      createdAt:serverTimestamp(),updatedAt:serverTimestamp()
-    });
-    toast("Actividad grupal guardada","ok");
+    if(editandoGrupalId){
+      await updateDoc(doc(db,"grupos",grupoId,"tareas",editandoGrupalId),{
+        ...formGrupal,
+        ultimaAccionPorUid:me.uid,ultimaAccionPorNombre:nombre,
+        updatedAt:serverTimestamp()
+      });
+      toast("Actividad grupal actualizada","ok");
+    } else {
+      await addDoc(collection(db,"grupos",grupoId,"tareas"),{
+        ...formGrupal,
+        ultimaAccionPorUid:me.uid,ultimaAccionPorNombre:nombre,
+        createdAt:serverTimestamp(),updatedAt:serverTimestamp()
+      });
+      toast("Actividad grupal guardada","ok");
+    }
     formGrupal={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",hora:"",descripcion:""};
+    editandoGrupalId=null;
     mostrandoFormGrupal=false;
     renderGrupal();
   }catch(e){console.error("Error al guardar actividad grupal:",e);toast("Error al guardar","err");}
+}
+
+function editarTareaGrupal(id){
+  const t=grupoTasks.find(x=>x.id===id);
+  if(!t)return;
+  formGrupal={titulo:t.titulo,materia:t.materia,tipo:t.tipo,tipoOtro:t.tipoOtro||"",fecha:t.fecha,hora:t.hora||"",descripcion:t.descripcion||""};
+  editandoGrupalId=id;
+  mostrandoFormGrupal=true;
+  renderGrupal();
 }
 
 async function deleteTaskGrupal(id){
@@ -1070,10 +1090,17 @@ function renderGrupal(){
   el.querySelector("#btn-invitar-grupo").addEventListener("click",()=>generarInviteGrupo());
   el.querySelector("#btn-nueva-grupal").addEventListener("click",()=>{
     mostrandoFormGrupal=!mostrandoFormGrupal;
-    if(mostrandoFormGrupal)renderFormGrupal();else document.getElementById("form-grupal-wrap").innerHTML="";
+    if(!mostrandoFormGrupal){
+      editandoGrupalId=null;
+      formGrupal={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",hora:"",descripcion:""};
+      document.getElementById("form-grupal-wrap").innerHTML="";
+    } else {
+      renderFormGrupal();
+    }
   });
   if(mostrandoFormGrupal)renderFormGrupal();
   el.querySelectorAll("[data-del-grupal]").forEach(b=>b.addEventListener("click",()=>{if(confirm("¿Eliminar esta actividad grupal?"))deleteTaskGrupal(b.dataset.delGrupal);}));
+  el.querySelectorAll("[data-edit-grupal]").forEach(b=>b.addEventListener("click",()=>editarTareaGrupal(b.dataset.editGrupal)));
   el.querySelector("#btn-eliminar-grupo")?.addEventListener("click",()=>eliminarGrupoCompleto());
   el.querySelector("#btn-salir-grupo")?.addEventListener("click",()=>salirDelGrupo());
 }
@@ -1101,7 +1128,8 @@ function tareaGrupalCardHTML(t){
           <div class="urgencia-badge" style="background:${urg.bg}"><div class="urgencia-num" style="color:${urg.text}">${dias}</div><div class="urgencia-lbl" style="color:${urg.text}">días</div></div>
         </div>
       </div>
-      <div style="margin-top:10px;display:flex;justify-content:flex-end">
+      <div style="margin-top:10px;display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn-sm" data-edit-grupal="${t.id}" style="font-size:12px;padding:6px 12px">✏️ Editar</button>
         <button class="btn-sm danger" data-del-grupal="${t.id}" style="font-size:12px;padding:6px 12px">🗑️ Eliminar</button>
       </div>
     </div>
@@ -1126,7 +1154,7 @@ function renderFormGrupal(){
       <div class="field"><label>Fecha *</label><input id="fg-fecha" type="date" value="${formGrupal.fecha}" min="${todayStr}"/></div>
       <div class="field"><label>Hora <span style="color:var(--muted);font-weight:400">(opcional)</span></label><input id="fg-hora" type="time" value="${formGrupal.hora||""}"/></div>
       <div class="field"><label>Notas <span style="color:var(--muted);font-weight:400">(opcional)</span></label><textarea id="fg-desc" rows="3">${sanitizeHTML(formGrupal.descripcion)}</textarea></div>
-      <button class="btn-sm gold" id="btn-save-task-grupal" style="width:100%;justify-content:center;padding:13px;font-size:15px">Guardar actividad grupal 🚀</button>
+      <button class="btn-sm gold" id="btn-save-task-grupal" style="width:100%;justify-content:center;padding:13px;font-size:15px">${editandoGrupalId?"Guardar cambios ✏️":"Guardar actividad grupal 🚀"}</button>
     </div>`;
   el.querySelectorAll(".tipo-btn[data-tipo]").forEach(btn=>btn.addEventListener("click",()=>{formGrupal.tipo=btn.dataset.tipo;renderFormGrupal();}));
   el.querySelector("#fg-tipo-otro")?.addEventListener("input",e=>formGrupal.tipoOtro=e.target.value);
@@ -1172,7 +1200,8 @@ service cloud.firestore {
     }
 
     match /grupos/{grupoId} {
-      allow read: if request.auth != null && request.auth.uid in resource.data.miembros;
+      // El read no se limita a integrantes: alguien que se está uniendo todavía no es miembro y necesita leer el grupo para sumarse
+      allow read: if request.auth != null;
       allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
       allow update: if request.auth != null && (
         request.auth.uid == resource.data.ownerUid ||
