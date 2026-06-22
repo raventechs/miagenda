@@ -356,9 +356,10 @@ const db=getFirestore(fbApp);
 const TIPOS=[
   {id:"examen",label:"📝 Examen",color:"#dc2626",bg:"#fee2e2"},
   {id:"trabajo",label:"📚 Trabajo Práctico",color:"#1d4ed8",bg:"#dbeafe"},
-  {id:"entrega",label:"📦 Entrega",color:"#16a34a",bg:"#dcfce7"},
-  {id:"exposicion",label:"🎤 Exposición",color:"#d97706",bg:"#fef3c7"},
+  {id:"compromiso",label:"📌 Compromiso",color:"#16a34a",bg:"#dcfce7"},
+  {id:"otro",label:"✏️ Otro",color:"#7c3aed",bg:"#f1e8fd"},
 ];
+function tipoLabel(t){return t.tipo==="otro"&&t.tipoOtro?`✏️ ${t.tipoOtro}`:getTipo(t.tipo).label;}
 const MATERIAS=["Matemática","Lengua","Historia","Geografía","Biología","Física","Química","Inglés","Ed. Física","Arte","Música","Informática","Filosofía","Economía","Otra"];
 const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const MESES_CORTO=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
@@ -368,11 +369,11 @@ const DIAS=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 let me=null,tasks=[],unsubTasks=null;
 let currentPage="resumen",delId=null;
 let grupoId=null,grupoData=null,grupoTasks=[],unsubGrupo=null,unsubGrupoTasks=null;
-let formGrupal={titulo:"",materia:"Matemática",tipo:"examen",fecha:"",descripcion:""};
+let formGrupal={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",descripcion:""};
 let mostrandoFormGrupal=false;
 let activeInviteGrupo=new URLSearchParams(window.location.search).get("inviteGrupo")||null;
 let calYear=new Date().getFullYear(),calMonth=new Date().getMonth(),selDay=null;
-let form={titulo:"",materia:"Matemática",tipo:"examen",fecha:"",descripcion:""};
+let form={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",descripcion:""};
 let logoTaps=0,logoTimer=null,pinBuf="";
 let isRegister=false;
 const todayStr=new Date().toISOString().split("T")[0];
@@ -670,7 +671,7 @@ async function saveTask(){
   const id=Date.now().toString();
   await setDoc(doc(db,"usuarios",me.uid,"tareas",id),{...form,creadoEn:serverTimestamp()});
   toast("Actividad guardada","ok");
-  form={titulo:"",materia:"Matemática",tipo:"examen",fecha:"",descripcion:""};
+  form={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",descripcion:""};
   renderPage("resumen");
 }
 
@@ -709,7 +710,7 @@ function renderResumen(){
           <div class="tarea-top">
             <div class="tarea-info">
               <div class="tarea-meta">
-                <span class="tarea-tag" style="background:${tipo.bg};color:${tipo.color}">${tipo.label}</span>
+                <span class="tarea-tag" style="background:${tipo.bg};color:${tipo.color}">${tipoLabel(t)}</span>
                 <span class="tarea-tag" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border)">${t.materia}</span>
               </div>
               <div class="tarea-titulo">${t.titulo}</div>
@@ -743,7 +744,7 @@ function renderResumen(){
 
   if(past.length>0){
     html+=`<div class="sec-title" style="color:var(--muted);margin:20px 0 10px">Actividades pasadas</div>`;
-    html+=past.map(t=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;opacity:.5;display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-weight:700;text-decoration:line-through;color:var(--muted)">${t.titulo}</div><div style="font-size:12px;color:var(--muted)">${t.materia} · ${getTipo(t.tipo).label}</div></div><button class="btn-sm danger" data-del="${t.id}" style="padding:5px 8px">🗑</button></div>`).join("");
+    html+=past.map(t=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;opacity:.5;display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-weight:700;text-decoration:line-through;color:var(--muted)">${t.titulo}</div><div style="font-size:12px;color:var(--muted)">${t.materia} · ${tipoLabel(t)}</div></div><button class="btn-sm danger" data-del="${t.id}" style="padding:5px 8px">🗑</button></div>`).join("");
   }
 
   el.innerHTML=html;
@@ -791,7 +792,7 @@ function renderAgenda(){
     detalle=`<div class="card">
       <div class="sec-title" style="margin-bottom:12px">${selDay} de ${MESES[calMonth]}</div>
       ${dt.length===0?`<div style="text-align:center;padding:16px;color:var(--muted);font-size:14px">Sin actividades este día</div>`:
-      dt.map(t=>{const tipo=getTipo(t.tipo);const urg=getUrgencia(getDaysLeft(t.fecha));return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${tipo.bg};border-radius:var(--radius-sm);margin-bottom:8px;border-left:4px solid ${tipo.color}"><div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--text)">${t.titulo}</div><div style="font-size:12px;color:var(--muted)">${t.materia} · ${tipo.label}</div></div><span style="background:${urg.bg};color:${urg.text};font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px">${urg.label}</span></div>`;}).join("")}
+      dt.map(t=>{const tipo=getTipo(t.tipo);const urg=getUrgencia(getDaysLeft(t.fecha));return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${tipo.bg};border-radius:var(--radius-sm);margin-bottom:8px;border-left:4px solid ${tipo.color}"><div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--text)">${t.titulo}</div><div style="font-size:12px;color:var(--muted)">${t.materia} · ${tipoLabel(t)}</div></div><span style="background:${urg.bg};color:${urg.text};font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px">${urg.label}</span></div>`;}).join("")}
     </div>`;
   }
 
@@ -816,6 +817,7 @@ function renderNueva(){
         <div class="tipos-grid">
           ${TIPOS.map(t=>`<button class="tipo-btn${form.tipo===t.id?" active":""}" data-tipo="${t.id}" style="${form.tipo===t.id?`border-color:${t.color};background:${t.bg};color:${t.color}`:""}">${t.label}</button>`).join("")}
         </div>
+        ${form.tipo==="otro"?`<input id="f-tipo-otro" style="margin-top:8px" value="${sanitizeHTML(form.tipoOtro||"")}" placeholder="Escribí qué tipo de actividad es..."/>`:""}
       </div>
       <div class="field"><label>Materia</label>
         <select id="f-materia">${MATERIAS.map(m=>`<option value="${m}"${form.materia===m?" selected":""}>${m}</option>`).join("")}</select>
@@ -836,6 +838,7 @@ function renderNueva(){
     </div>`;
 
   el.querySelectorAll(".tipo-btn[data-tipo]").forEach(btn=>btn.addEventListener("click",()=>{form.tipo=btn.dataset.tipo;renderNueva();}));
+  el.querySelector("#f-tipo-otro")?.addEventListener("input",e=>form.tipoOtro=e.target.value);
   el.querySelector("#f-materia").addEventListener("change",e=>form.materia=e.target.value);
   el.querySelector("#f-titulo").addEventListener("input",e=>{form.titulo=e.target.value;});
   el.querySelector("#f-fecha").addEventListener("change",e=>{form.fecha=e.target.value;renderNueva();});
@@ -966,7 +969,7 @@ async function saveTaskGrupal(){
       createdAt:serverTimestamp(),updatedAt:serverTimestamp()
     });
     toast("Actividad grupal guardada","ok");
-    formGrupal={titulo:"",materia:"Matemática",tipo:"examen",fecha:"",descripcion:""};
+    formGrupal={titulo:"",materia:"Matemática",tipo:"examen",tipoOtro:"",fecha:"",descripcion:""};
     mostrandoFormGrupal=false;
     renderGrupal();
   }catch(e){console.error("Error al guardar actividad grupal:",e);toast("Error al guardar","err");}
@@ -1063,7 +1066,7 @@ function tareaGrupalCardHTML(t){
         <div class="tarea-info">
           <div class="tarea-titulo">${sanitizeHTML(t.titulo)}</div>
           <div class="tarea-meta">
-            <span class="tarea-tag" style="background:${tipo.bg};color:${tipo.color}">${tipo.label}</span>
+            <span class="tarea-tag" style="background:${tipo.bg};color:${tipo.color}">${tipoLabel(t)}</span>
             <span class="tarea-fecha">${fmtFecha(t.fecha)}</span>
           </div>
           ${t.descripcion?`<div class="tarea-desc">${sanitizeHTML(t.descripcion)}</div>`:""}
@@ -1090,6 +1093,7 @@ function renderFormGrupal(){
         <div class="tipos-grid">
           ${TIPOS.map(t=>`<button class="tipo-btn${formGrupal.tipo===t.id?" active":""}" data-tipo="${t.id}" style="${formGrupal.tipo===t.id?`border-color:${t.color};background:${t.bg};color:${t.color}`:""}">${t.label}</button>`).join("")}
         </div>
+        ${formGrupal.tipo==="otro"?`<input id="fg-tipo-otro" style="margin-top:8px" value="${sanitizeHTML(formGrupal.tipoOtro||"")}" placeholder="Escribí qué tipo de actividad es..."/>`:""}
       </div>
       <div class="field"><label>Materia</label>
         <select id="fg-materia">${MATERIAS.map(m=>`<option value="${m}"${formGrupal.materia===m?" selected":""}>${m}</option>`).join("")}</select>
@@ -1100,6 +1104,7 @@ function renderFormGrupal(){
       <button class="btn-sm gold" id="btn-save-task-grupal" style="width:100%;justify-content:center;padding:13px;font-size:15px">Guardar actividad grupal 🚀</button>
     </div>`;
   el.querySelectorAll(".tipo-btn[data-tipo]").forEach(btn=>btn.addEventListener("click",()=>{formGrupal.tipo=btn.dataset.tipo;renderFormGrupal();}));
+  el.querySelector("#fg-tipo-otro")?.addEventListener("input",e=>formGrupal.tipoOtro=e.target.value);
   el.querySelector("#fg-materia").addEventListener("change",e=>formGrupal.materia=e.target.value);
   el.querySelector("#fg-titulo").addEventListener("input",e=>formGrupal.titulo=e.target.value);
   el.querySelector("#fg-fecha").addEventListener("change",e=>formGrupal.fecha=e.target.value);
