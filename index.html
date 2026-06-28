@@ -1,4 +1,17 @@
 <!DOCTYPE html>
+<!--
+  ════════════════════════════════════════════════════════════
+  MIAGENDA — v2.1
+  Fecha de esta versión: 2026-06-27
+  Cambios respecto a la versión anterior (agenda grupal, hecha por
+  otra IA, ya en uso hace varios días): se restringió la regla de
+  Firestore "invitacionesGrupo" para que solo el dueño del grupo
+  pueda crear invitaciones de SU propio grupo (antes cualquier
+  usuario logueado podía crear ese tipo de documento, aunque no
+  le servía para entrar a ningún lado igual). El resto del sistema
+  de agenda grupal queda igual, ya estaba bien hecho.
+  ════════════════════════════════════════════════════════════
+-->
 <html lang="es">
 <head>
 <meta charset="UTF-8"/>
@@ -1220,7 +1233,9 @@ service cloud.firestore {
 
     match /invitacionesGrupo/{id} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
+      allow create: if request.auth != null &&
+        request.resource.data.creadoPorUid == request.auth.uid &&
+        get(/databases/$(database)/documents/grupos/$(request.resource.data.grupoId)).data.ownerUid == request.auth.uid;
       allow update: if request.auth != null;
     }
   }
