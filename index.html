@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ════════════════════════════════════════════════════════════
-  MIAGENDA — v2.1
+  MIAGENDA — v2.2
   Fecha de esta versión: 2026-06-27
   Cambios respecto a la versión anterior (agenda grupal, hecha por
   otra IA, ya en uso hace varios días): se restringió la regla de
@@ -359,11 +359,25 @@ const FB={
   appId:"1:626485085205:web:1be15baf1d7ab62676ba1c"
 };
 // 🔐 PIN ADMIN
-const ADMIN_PIN="1990";
+const ADMIN_PIN="2580";
 
 const fbApp=initializeApp(FB);
 const auth=getAuth(fbApp);
 const db=getFirestore(fbApp);
+
+// LOG DE ERRORES — P5 ROBUSTEZ
+async function logError(origen, mensaje, extra) {
+  try {
+    const uid = auth.currentUser ? auth.currentUser.uid : 'anonimo';
+    await addDoc(collection(db,'errores'), {
+      app: 'MiAgenda', origen,
+      mensaje: String(mensaje),
+      extra: extra ? String(extra) : null,
+      uid,
+      ts: serverTimestamp()
+    });
+  } catch(_) {}
+}
 
 // ── CONSTANTES ────────────────────────────────────────────
 const TIPOS=[
@@ -785,6 +799,7 @@ function renderResumen(){
 // ── AGENDA ───────────────────────────────────────────────
 function renderAgenda(){
   const el=document.getElementById("page-agenda");
+  if(!el.querySelector(".csv-btn-agenda")){const b=document.createElement("button");b.className="csv-btn-agenda";b.innerHTML="⬇️ Exportar CSV";b.onclick=exportarCSV;b.style.cssText="background:#14b8a6;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px;width:100%";el.prepend(b);}
   const firstDay=new Date(calYear,calMonth,1).getDay();
   const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
   const daysInPrev=new Date(calYear,calMonth,0).getDate();
@@ -1184,6 +1199,33 @@ function openDel(id){delId=id;document.getElementById("modal-del").classList.add
 document.getElementById("btn-cancel-del").addEventListener("click",()=>{delId=null;document.getElementById("modal-del").classList.remove("open");});
 document.getElementById("btn-confirm-del").addEventListener("click",async()=>{if(delId)await deleteTask(delId);delId=null;document.getElementById("modal-del").classList.remove("open");});
 document.getElementById("modal-del").addEventListener("click",e=>{if(e.target.id==="modal-del"){delId=null;document.getElementById("modal-del").classList.remove("open");}});
+
+// EXPORTAR CSV — P2 ROBUSTEZ
+async function exportarCSV() {
+  try {
+    const uid = auth.currentUser ? auth.currentUser.uid : null;
+    if (!uid) { toast('Iniciá sesión para exportar', 'warn'); return; }
+    const snap = await getDocs(query(collection(db,'tareas'), where('uid','==',uid), orderBy('fecha','asc')));
+    const rows = [['Titulo','Tipo','Fecha','Estado','Grupo','Notas']];
+    snap.forEach(d => {
+      const v = d.data();
+      rows.push([
+        (v.titulo||'').replace(/"/g,"'"),
+        v.tipo||'',
+        v.fecha||'',
+        v.completada ? 'Completada' : 'Pendiente',
+        v.grupoId ? 'Grupal' : 'Personal',
+        (v.notas||'').replace(/"/g,"'")
+      ]);
+    });
+    const csv = rows.map(r => r.map(x => `"${x}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'miagenda-actividades-' + new Date().toISOString().split('T')[0] + '.csv';
+    a.click();
+    toast('CSV exportado');
+  } catch(e) { logError('exportCSV', e); }
+}
 </script>
 
 <!--
@@ -1249,5 +1291,12 @@ NOTA IMPORTANTE PARA RUBÉN:
 - "esAdmin()" asume que administrás MiAgenda con la cuenta rgaraventa@gmail.com, igual que el resto del portfolio. Si usás otra cuenta, avisame y la cambiamos.
 - El límite de integrantes del grupo se valida también en el SERVIDOR (no solo en la pantalla): cuando alguien acepta una invitación, Firestore chequea en tiempo real cuántos integrantes tiene el grupo contra el límite configurado en la cuenta de quien lo creó.
 -->
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/miagenda/sw-miagenda.js')
+      .catch(e => console.warn('SW:', e));
+  }
+</script>
 </body>
 </html>
