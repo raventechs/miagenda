@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--
   ════════════════════════════════════════════════════════════
-  MIAGENDA — v2.2
-  Fecha de esta versión: 2026-06-27
+  MIAGENDA — v2.3
+  Fecha de esta versión: 2026-07-07
   Cambios respecto a la versión anterior (agenda grupal, hecha por
   otra IA, ya en uso hace varios días): se restringió la regla de
   Firestore "invitacionesGrupo" para que solo el dueño del grupo
@@ -16,6 +16,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link rel="manifest" href="/miagenda/manifest.json">
 <title>MiAgenda</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
@@ -624,6 +625,8 @@ onAuthStateChanged(auth,async user=>{
     startFirestore();
     renderPage("resumen");
     checkDemo();
+    actualizarBtnNotif();
+    setTimeout(sincronizarEventosSW, 2000); // esperar que el SW esté activo
   } else {
     me=null;userDoc=null;tasks=[];
     grupoId=null;grupoData=null;grupoTasks=[];
@@ -800,6 +803,7 @@ function renderResumen(){
 function renderAgenda(){
   const el=document.getElementById("page-agenda");
   if(!el.querySelector(".csv-btn-agenda")){const b=document.createElement("button");b.className="csv-btn-agenda";b.innerHTML="⬇️ Exportar CSV";b.onclick=exportarCSV;b.style.cssText="background:#14b8a6;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px;width:100%";el.prepend(b);}
+  if(!el.querySelector("#btn-activar-notif")){const bn=document.createElement("button");bn.id="btn-activar-notif";bn.onclick=activarNotificaciones;bn.style.cssText="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px;width:100%;display:none";el.prepend(bn);actualizarBtnNotif();}
   const firstDay=new Date(calYear,calMonth,1).getDay();
   const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
   const daysInPrev=new Date(calYear,calMonth,0).getDate();
@@ -1293,10 +1297,58 @@ NOTA IMPORTANTE PARA RUBÉN:
 -->
 
 <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/miagenda/sw-miagenda.js')
-      .catch(e => console.warn('SW:', e));
+// ── SERVICE WORKER + NOTIFICACIONES (PLUS) ────────────────────
+let swReg = null;
+
+async function iniciarSW() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    swReg = await navigator.serviceWorker.register('/miagenda/sw-miagenda.js');
+  } catch(e) { console.warn('SW:', e); }
+}
+
+// Envía los eventos actuales del usuario al SW
+function sincronizarEventosSW() {
+  if (!swReg?.active || !me) return;
+  if (!tieneNotificaciones()) return;
+  const payload = tasks.map(t => ({
+    id: t.id, titulo: t.titulo, materia: t.materia || '',
+    tipo: t.tipo, tipoOtro: t.tipoOtro || '',
+    fecha: t.fecha, hora: t.hora || ''
+  }));
+  swReg.active.postMessage({ type: 'SET_EVENTOS', eventos: payload });
+}
+
+function tieneNotificaciones() {
+  return userDoc?.features?.notificaciones === true;
+}
+
+async function activarNotificaciones() {
+  if (!swReg) { toast('Instalá la app primero', 'warn'); return; }
+  const permiso = await Notification.requestPermission();
+  if (permiso !== 'granted') { toast('Permiso de notificaciones denegado', 'err'); return; }
+  try {
+    await swReg.periodicSync?.register('miagenda-check', { minInterval: 60 * 60 * 1000 });
+  } catch(e) {} // periodicSync opcional — requiere PWA instalada
+  toast('Notificaciones activadas ✓', 'ok');
+  sincronizarEventosSW();
+}
+
+// Mostrar/ocultar botón PLUS según el plan del usuario
+function actualizarBtnNotif() {
+  const btn = document.getElementById('btn-activar-notif');
+  if (!btn) return;
+  if (tieneNotificaciones()) {
+    btn.style.display = 'block';
+    btn.textContent = Notification.permission === 'granted'
+      ? '🔔 Notificaciones activas'
+      : '🔔 Activar recordatorios';
+  } else {
+    btn.style.display = 'none';
   }
+}
+
+iniciarSW();
 </script>
 </body>
 </html>
