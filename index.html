@@ -1402,8 +1402,6 @@ iniciarSW();
 const VAPID_KEY = 'gibql0t_l2okUt_PjrP9YxHEW3N8q8zUck2AE9DmE3g'; // ← pegar VAPID key de Firebase Console
 
 async function iniciarNotificaciones() {
-  // Solo mostrar si nunca preguntamos y el usuario está logueado
-  if (!me) return;
   const yaDecidio = localStorage.getItem('miagenda-notif-decision');
   if (yaDecidio) {
     if (yaDecidio === 'si') await registrarFCMToken();
@@ -1437,9 +1435,10 @@ async function registrarFCMToken() {
     const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
     const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
 
-    if (token && me) {
+    const uid = me?.uid || me?.id || (typeof me === 'string' ? me : null);
+    if (token && uid) {
       // Guardar token en el perfil del usuario
-      await setDoc(doc(db, 'usuarios', me.uid), { fcmToken: token }, { merge: true });
+      await setDoc(doc(db, 'usuarios', uid), { fcmToken: token }, { merge: true });
       console.log('✅ FCM token registrado');
     }
   } catch(e) {
