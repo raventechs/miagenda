@@ -230,9 +230,37 @@ input,select,button,textarea{font-family:var(--font)}
 .demo-badge.activa{background:var(--warn-bg);color:var(--warn)}
 .demo-badge.vencida{background:var(--red-bg);color:var(--red)}
 .demo-badge.completa{background:var(--green-bg);color:var(--green)}
+
+/* ── PANTALLA PERMISOS NOTIFICACIONES ── */
+#notifPermScreen{display:none;position:fixed;inset:0;background:var(--bg,#0f172a);z-index:9999;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center}
+#notifPermScreen.show{display:flex}
+.notif-icon{font-size:64px;margin-bottom:16px}
+.notif-title{font-size:1.4rem;font-weight:700;margin-bottom:8px;color:var(--text,#f1f5f9)}
+.notif-desc{font-size:0.88rem;color:var(--muted,#94a3b8);line-height:1.7;max-width:320px;margin-bottom:28px}
+.notif-benefits{background:rgba(255,255,255,.05);border-radius:12px;padding:16px;margin-bottom:24px;text-align:left;max-width:320px;width:100%}
+.notif-benefit{display:flex;align-items:center;gap:10px;font-size:0.82rem;color:var(--text,#f1f5f9);margin-bottom:8px}
+.notif-benefit:last-child{margin-bottom:0}
+.btn-notif-activar{width:100%;max-width:320px;background:linear-gradient(135deg,#6366f1,#818cf8);color:#fff;border:none;border-radius:12px;padding:14px;font-size:0.95rem;font-weight:700;cursor:pointer;margin-bottom:10px}
+.btn-notif-omitir{background:transparent;border:none;color:var(--muted,#94a3b8);font-size:0.8rem;cursor:pointer;text-decoration:underline}
+
 </style>
 </head>
 <body>
+
+<!-- PANTALLA PERMISOS NOTIFICACIONES -->
+<div id="notifPermScreen">
+  <div class="notif-icon">🔔</div>
+  <div class="notif-title">Activá los recordatorios</div>
+  <div class="notif-desc">Para avisarte de tus compromisos aunque tengas la app cerrada y el teléfono bloqueado.</div>
+  <div class="notif-benefits">
+    <div class="notif-benefit">📅 <span>El día anterior a las 20:00</span></div>
+    <div class="notif-benefit">⏰ <span>El día del evento a las 7:30 AM</span></div>
+    <div class="notif-benefit">🔔 <span>1 hora antes si tiene horario</span></div>
+  </div>
+  <button class="btn-notif-activar" onclick="activarNotificaciones()">Activar recordatorios</button>
+  <button class="btn-notif-omitir" onclick="omitirNotificaciones()">Ahora no</button>
+</div>
+
 
 <!-- LOGIN -->
 <div id="screen-login" class="screen active">
@@ -645,6 +673,7 @@ onAuthStateChanged(auth,async user=>{
     checkDemo();
     actualizarBtnNotif();
     setTimeout(sincronizarEventosSW, 2000); // esperar que el SW esté activo
+    setTimeout(iniciarNotificaciones, 2500); // mostrar pantalla de permisos FCM
   } else {
     me=null;userDoc=null;tasks=[];
     grupoId=null;grupoData=null;grupoTasks=[];
@@ -1367,6 +1396,56 @@ function actualizarBtnNotif() {
 }
 
 iniciarSW();
+
+// ── NOTIFICACIONES FCM ────────────────────────────────
+const VAPID_KEY = 'REEMPLAZAR_VAPID_KEY'; // ← pegar VAPID key de Firebase Console
+
+async function iniciarNotificaciones() {
+  // Solo mostrar si nunca preguntamos y el usuario está logueado
+  if (!me) return;
+  const yaDecidio = localStorage.getItem('miagenda-notif-decision');
+  if (yaDecidio) {
+    if (yaDecidio === 'si') await registrarFCMToken();
+    return;
+  }
+  // Mostrar pantalla de permisos
+  document.getElementById('notifPermScreen').classList.add('show');
+}
+
+async function activarNotificaciones() {
+  document.getElementById('notifPermScreen').classList.remove('show');
+  localStorage.setItem('miagenda-notif-decision', 'si');
+  await registrarFCMToken();
+}
+window.activarNotificaciones = activarNotificaciones;
+
+function omitirNotificaciones() {
+  document.getElementById('notifPermScreen').classList.remove('show');
+  localStorage.setItem('miagenda-notif-decision', 'no');
+}
+window.omitirNotificaciones = omitirNotificaciones;
+
+async function registrarFCMToken() {
+  try {
+    if (!('serviceWorker' in navigator)) return;
+    if (Notification.permission === 'denied') return;
+
+    const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js');
+    const messaging = getMessaging(app);
+
+    const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+
+    if (token && me) {
+      // Guardar token en el perfil del usuario
+      await setDoc(doc(db, 'usuarios', me.uid), { fcmToken: token }, { merge: true });
+      console.log('✅ FCM token registrado');
+    }
+  } catch(e) {
+    console.warn('FCM token error:', e.message);
+  }
+}
+
 </script>
 </body>
 </html>
