@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <!--
   ════════════════════════════════════════════════════════════
-  MIAGENDA — v2.3
-  Fecha de esta versión: 2026-07-07
+  MIAGENDA — v2.4
+  Fecha de esta versión: 2026-08-01
+  - v2.4 (01/08/2026): Seguridad — sanitizeHTML() aplicada en puntos donde faltaba (tareas personales, panel admin), App Check SDK preparado.
   Cambios respecto a la versión anterior (agenda grupal, hecha por
   otra IA, ya en uso hace varios días): se restringió la regla de
   Firestore "invitacionesGrupo" para que solo el dueño del grupo
@@ -459,6 +460,7 @@ button[class*="metodo"]:active, button[class*="pago"]:active {
 
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{initializeAppCheck,ReCaptchaV3Provider}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile,GoogleAuthProvider,signInWithPopup}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import{getFirestore,collection,doc,setDoc,addDoc,updateDoc,getDoc,deleteDoc,onSnapshot,query,orderBy,serverTimestamp,getDocs,Timestamp,arrayUnion,arrayRemove}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -475,6 +477,10 @@ const FB={
 const ADMIN_PIN="2580";
 
 const fbApp=initializeApp(FB);
+const APPCHECK_KEY="";
+if(APPCHECK_KEY){
+  initializeAppCheck(fbApp,{provider:new ReCaptchaV3Provider(APPCHECK_KEY),isTokenAutoRefreshEnabled:true});
+}
 const auth=getAuth(fbApp);
 const db=getFirestore(fbApp);
 
@@ -613,8 +619,8 @@ async function loadAdminUsers(){
       </div>`;
     }
     return`<div class="admin-card">
-      <div class="admin-card-title">${u.nombre||u.email}${ban?'<span class="ban-badge">BANEADO</span>':''} ${demoBadge}</div>
-      <div class="admin-card-sub">${u.email||d.id}</div>
+      <div class="admin-card-title">${sanitizeHTML(u.nombre||u.email)}${ban?'<span class="ban-badge">BANEADO</span>':''} ${demoBadge}</div>
+      <div class="admin-card-sub">${sanitizeHTML(u.email||d.id)}</div>
       ${demoInfo}
       <div class="admin-card-actions" style="margin-top:8px">
         ${ban?`<button class="btn-aunban" data-uid="${d.id}">✅ Desbanear</button>`:`<button class="btn-aban" data-uid="${d.id}">🚫 Banear</button>`}
@@ -647,7 +653,7 @@ async function loadAdminTareas(){
     tareasSnap.forEach(d=>all.push({id:d.id,userEmail:userDoc.data().email||userDoc.id,...d.data()}));
   }
   if(all.length===0){c.innerHTML=emptyHTML("📋","Sin tareas");return;}
-  c.innerHTML=all.map(t=>`<div class="admin-card"><div class="admin-card-title">${t.titulo}</div><div class="admin-card-sub">${t.materia} · ${t.fecha} · ${t.userEmail}</div></div>`).join("");
+  c.innerHTML=all.map(t=>`<div class="admin-card"><div class="admin-card-title">${sanitizeHTML(t.titulo)}</div><div class="admin-card-sub">${sanitizeHTML(t.materia)} · ${t.fecha} · ${sanitizeHTML(t.userEmail)}</div></div>`).join("");
 }
 
 document.getElementById("admin-users-list").addEventListener("click",async e=>{
@@ -868,10 +874,10 @@ function tareaResumenCardHTML(t,esGrupal){
         <div class="tarea-info">
           <div class="tarea-meta">
             <span class="tarea-tag" style="background:${tipo.bg};color:${tipo.color}">${tipoLabel(t)}</span>
-            <span class="tarea-tag" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border)">${t.materia}</span>
+            <span class="tarea-tag" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border)">${sanitizeHTML(t.materia)}</span>
           </div>
-          <div class="tarea-titulo">${t.titulo}</div>
-          ${t.descripcion?`<div class="tarea-desc">${t.descripcion}</div>`:""}
+          <div class="tarea-titulo">${sanitizeHTML(t.titulo)}</div>
+          ${t.descripcion?`<div class="tarea-desc">${sanitizeHTML(t.descripcion)}</div>`:""}
           <div class="tarea-fecha">📅 ${fmtFechaHora(t)}</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
@@ -922,7 +928,7 @@ function renderResumen(){
 
   if(past.length>0){
     html+=`<div class="sec-title" style="color:var(--muted);margin:20px 0 10px">Actividades pasadas</div>`;
-    html+=past.map(t=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;opacity:.5;display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-weight:700;text-decoration:line-through;color:var(--muted)">${t.titulo}</div><div style="font-size:12px;color:var(--muted)">${t.materia} · ${tipoLabel(t)}</div></div><button class="btn-sm danger" data-del="${t.id}" style="padding:5px 8px">🗑</button></div>`).join("");
+    html+=past.map(t=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;opacity:.5;display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-weight:700;text-decoration:line-through;color:var(--muted)">${sanitizeHTML(t.titulo)}</div><div style="font-size:12px;color:var(--muted)">${sanitizeHTML(t.materia)} · ${tipoLabel(t)}</div></div><button class="btn-sm danger" data-del="${t.id}" style="padding:5px 8px">🗑</button></div>`).join("");
   }
 
   el.innerHTML=html;
@@ -973,7 +979,7 @@ function renderAgenda(){
     detalle=`<div class="card">
       <div class="sec-title" style="margin-bottom:12px">${selDay} de ${MESES[calMonth]}</div>
       ${dt.length===0?`<div style="text-align:center;padding:16px;color:var(--muted);font-size:14px">Sin actividades este día</div>`:
-      dt.map(t=>{const tipo=getTipo(t.tipo);const urg=getUrgencia(getDaysLeft(t.fecha));return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${tipo.bg};border-radius:var(--radius-sm);margin-bottom:8px;border-left:4px solid ${tipo.color}"><div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--text)">${t.titulo}${t.hora?` · 🕐 ${t.hora}`:""}</div><div style="font-size:12px;color:var(--muted)">${t.materia} · ${tipoLabel(t)}</div></div><span style="background:${urg.bg};color:${urg.text};font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px">${urg.label}</span></div>`;}).join("")}
+      dt.map(t=>{const tipo=getTipo(t.tipo);const urg=getUrgencia(getDaysLeft(t.fecha));return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${tipo.bg};border-radius:var(--radius-sm);margin-bottom:8px;border-left:4px solid ${tipo.color}"><div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--text)">${sanitizeHTML(t.titulo)}${t.hora?` · 🕐 ${t.hora}`:""}</div><div style="font-size:12px;color:var(--muted)">${sanitizeHTML(t.materia)} · ${tipoLabel(t)}</div></div><span style="background:${urg.bg};color:${urg.text};font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px">${urg.label}</span></div>`;}).join("")}
     </div>`;
   }
 
@@ -1004,7 +1010,7 @@ function renderNueva(){
         <select id="f-materia">${MATERIAS.map(m=>`<option value="${m}"${form.materia===m?" selected":""}>${m}</option>`).join("")}</select>
       </div>
       <div class="field"><label>Título / Tema *</label>
-        <input id="f-titulo" value="${form.titulo}" placeholder="Ej: Parcial de álgebra, TP Revolución Francesa..."/>
+        <input id="f-titulo" value="${sanitizeHTML(form.titulo)}" placeholder="Ej: Parcial de álgebra, TP Revolución Francesa..."/>
       </div>
       <div class="field"><label>Fecha *</label>
         <input id="f-fecha" type="date" value="${form.fecha}" min="${todayStr}"/>
@@ -1014,7 +1020,7 @@ function renderNueva(){
         <input id="f-hora" type="time" value="${form.hora||""}"/>
       </div>
       <div class="field"><label>Notas <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
-        <textarea id="f-desc" rows="3" placeholder="Temas, capítulos, materiales...">${form.descripcion}</textarea>
+        <textarea id="f-desc" rows="3" placeholder="Temas, capítulos, materiales...">${sanitizeHTML(form.descripcion)}</textarea>
       </div>
       <button class="btn-sm gold" id="btn-save-task" style="width:100%;justify-content:center;padding:13px;font-size:15px;${!form.titulo||!form.fecha?"opacity:.5;cursor:not-allowed":""}">
         Guardar actividad 🚀
