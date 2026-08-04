@@ -3,7 +3,7 @@
   "short_name": "MiAgenda",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FAFAFA",
+  "background_color": "#FFFFFF",
   "theme_color": "#2980B9",
   "lang": "es",
   "icons": [
