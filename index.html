@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <!--
   ════════════════════════════════════════════════════════════
-  MIAGENDA — v2.4
-  Fecha de esta versión: 2026-10-18
+  MIAGENDA — v2.5
+  Fecha de esta versión: 2026-10-26
+  v2.5: también se arregló Exportar CSV (fallaba siempre: usaba una colección vieja).
+  v2.5: BACKUP (no tenía): automático una vez por día al entrar (baja el archivo + copia local), botón manual y restaurar al final de Resumen.
   v2.4: MODO PRÁCTICA (al final de Resumen → 🎓): carga 10 actividades de ejemplo (exámenes, trabajos prácticos y compromisos)
   marcadas _demo; un botón las quita sin tocar las reales.
   v2.3 (2026-07-07):
@@ -794,6 +796,7 @@ onAuthStateChanged(auth,async user=>{
     startFirestore();
     renderPage("resumen");
     checkDemo();
+    chequearBackupDiario();   // v2.5: backup automático diario
     actualizarBtnNotif();
     setTimeout(sincronizarEventosSW, 2000); // esperar que el SW esté activo
     setTimeout(iniciarNotificaciones, 2500); // mostrar pantalla de permisos FCM
@@ -1428,7 +1431,7 @@ async function exportarCSV() {
   try {
     const uid = auth.currentUser ? auth.currentUser.uid : null;
     if (!uid) { toast('Iniciá sesión para exportar', 'warn'); return; }
-    const snap = await getDocs(query(collection(db,'tareas'), where('uid','==',uid), orderBy('fecha','asc')));
+    const snap = await getDocs(query(collection(db,'usuarios',uid,'tareas'), orderBy('fecha','asc')));   // v2.5: antes leía una colección vieja con un filtro no importado y fallaba siempre
     const rows = [['Titulo','Tipo','Fecha','Estado','Grupo','Notas']];
     snap.forEach(d => {
       const v = d.data();
@@ -1449,6 +1452,151 @@ async function exportarCSV() {
     toast('CSV exportado');
   } catch(e) { logError('exportCSV', e); }
 }
+
+// ══════════ BACKUP ESTÁNDAR 2.5 ══════════
+// Automático: una vez por día al entrar el dueño. Baja el archivo JSON al dispositivo y deja una copia en IndexedDB (las últimas 7).
+// Manual y restaurar: botones de la sección de backup. Las fechas de Firestore (Timestamp) se guardan con una marca reversible.
+// Está dentro del módulo de la app (antes estaba en un script aparte que no veía db, auth ni getDocs y fallaba siempre).
+function _bkHoy() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function _bkSer(v) {
+  if (v && typeof v === 'object') {
+    if (typeof v.toMillis === 'function' && 'seconds' in v && 'nanoseconds' in v) return { __ts: [v.seconds, v.nanoseconds] };
+    if (Array.isArray(v)) return v.map(_bkSer);
+    const o = {}; Object.keys(v).forEach(k => { o[k] = _bkSer(v[k]); }); return o;
+  }
+  return v;
+}
+function _bkRev(v) {
+  if (v && typeof v === 'object') {
+    if (Array.isArray(v)) return v.map(_bkRev);
+    if (Array.isArray(v.__ts) && v.__ts.length === 2) return new Timestamp(v.__ts[0], v.__ts[1]);
+    const o = {}; Object.keys(v).forEach(k => { o[k] = _bkRev(v[k]); }); return o;
+  }
+  return v;
+}
+async function _bkLeer(ref) {
+  const s = await ref.get();
+  return s.docs.map(d => Object.assign({ _id: d.id }, _bkSer(d.data())));
+}
+function _bkIdb(fecha, json) {
+  return new Promise(function (res) {
+    try {
+      const rq = indexedDB.open('miagenda-backup', 1);
+      rq.onupgradeneeded = function () { rq.result.createObjectStore('b', { keyPath: 'fecha' }); };
+      rq.onsuccess = function () {
+        const idb = rq.result, tx = idb.transaction('b', 'readwrite'), st = tx.objectStore('b');
+        st.put({ fecha: fecha, json: json });
+        st.getAllKeys().onsuccess = function (e) { const ks = e.target.result.sort(); while (ks.length > 7) st.delete(ks.shift()); };
+        tx.oncomplete = function () { idb.close(); res(true); };
+        tx.onerror = tx.onabort = function () { idb.close(); res(false); };
+      };
+      rq.onerror = function () { res(false); };
+    } catch (e) { res(false); }
+  });
+}
+function _bkDescargar(json, fecha) {
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'miagenda-backup-' + fecha + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+}
+async function _bkDocs(q) { const s = await getDocs(q); return s.docs.map(function (d) { return Object.assign({ _id: d.id }, _bkSer(d.data())); }); }
+async function _bkEscribir(ops) {
+  for (let i = 0; i < ops.length; i += 25)
+    await Promise.all(ops.slice(i, i + 25).map(function (o) { return o[2] ? setDoc(o[0], o[1], { merge: true }) : setDoc(o[0], o[1]); }));
+}
+function _bkCfg() { return { app: 'MiAgenda', ver: '2.5', ls: 'miagenda-ultimo-backup', label: 'ultimoBackupFecha' }; }
+function _bkMsg(m, t) { toast(m, t === 'err' ? 'err' : ''); }
+function _bkCtx() {
+  if (!me || !userDoc) return { ok: false, msg: 'Iniciá sesión primero' };
+  return { ok: true, uid: me.uid };
+}
+async function _bkReunir(C) {
+  const tareas = await _bkDocs(collection(db, 'usuarios', C.uid, 'tareas'));
+  let grupo = null;
+  if (grupoId) {
+    try {
+      const g = await getDoc(doc(db, 'grupos', grupoId));
+      if (g.exists()) grupo = Object.assign({ _id: grupoId }, _bkSer(g.data()), { _tareas: await _bkDocs(collection(db, 'grupos', grupoId, 'tareas')) });
+    } catch (e) {}
+  }
+  return { tareas: tareas, grupo: grupo };
+}
+function _bkOps(bk, C) {
+  if (!Array.isArray(bk.tareas)) throw new Error('el archivo no tiene actividades');
+  const ops = [];
+  bk.tareas.forEach(function (d) { const r = Object.assign({}, d), id = r._id; delete r._id; if (id) ops.push([doc(db, 'usuarios', C.uid, 'tareas', id), _bkRev(r)]); });
+  // la agenda grupal solo la restaura el dueño del grupo y solo si es el mismo grupo
+  if (bk.grupo && grupoId && bk.grupo._id === grupoId && grupoData && grupoData.ownerUid === C.uid)
+    (bk.grupo._tareas || []).forEach(function (d) { const r = Object.assign({}, d), id = r._id; delete r._id; if (id) ops.push([doc(db, 'grupos', grupoId, 'tareas', id), _bkRev(r)]); });
+  return ops;
+}
+function _bkMontarUI(el) {
+  if (!el || el.querySelector('#bkCard')) return;
+  const K = _bkCfg();
+  const d = document.createElement('div'); d.className = 'card'; d.id = 'bkCard'; d.style.marginTop = '16px';
+  d.innerHTML = '<div class="sec-title" style="margin-bottom:8px">💾 Backup de datos</div>' +
+    '<p style="font-size:13px;color:var(--muted);margin-bottom:12px">Una copia de tus actividades (y de la agenda grupal, que solo restaura el dueño del grupo). Se baja solo una vez por día al entrar; también podés bajarlo cuando quieras o restaurar uno anterior.</p>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+    '<button class="btn-primary" id="bkBtnGen" style="width:auto;padding:9px 14px;font-size:13px">📥 Descargar backup ahora</button>' +
+    '<button class="btn-secondary" id="bkBtnRest" style="width:auto;padding:9px 14px;font-size:13px">📤 Restaurar desde un archivo</button></div>' +
+    '<input type="file" id="inputRestaurarBackup" accept=".json,application/json" style="display:none">' +
+    '<p style="font-size:11px;color:var(--muted);margin-top:8px">Último backup: <span id="ultimoBackupFecha">—</span></p>';
+  el.appendChild(d);
+  d.querySelector('#bkBtnGen').addEventListener('click', function () { generarBackup(false); });
+  d.querySelector('#bkBtnRest').addEventListener('click', function () { d.querySelector('#inputRestaurarBackup').click(); });
+  d.querySelector('#inputRestaurarBackup').addEventListener('change', function () { restaurarBackup(this); });
+  let ultimo = null; try { ultimo = localStorage.getItem(K.ls); } catch (e) {}
+  if (ultimo) d.querySelector('#ultimoBackupFecha').textContent = ultimo;
+}
+(function () { const o = renderResumen; renderResumen = function () { o.apply(this, arguments); _bkMontarUI(document.getElementById('page-resumen')); }; })();
+
+async function generarBackup(silencioso) {
+  const K = _bkCfg(), C = _bkCtx();
+  if (!C.ok) { if (!silencioso) _bkMsg(C.msg, 'err'); return; }
+  try {
+    if (!silencioso) _bkMsg('Preparando backup…');
+    const datos = await _bkReunir(C);
+    const fecha = _bkHoy();
+    const json = JSON.stringify(Object.assign({ app: K.app, version: K.ver, fecha: new Date().toISOString(), uid: C.uid }, datos));
+    _bkDescargar(json, fecha);
+    await _bkIdb(fecha, json);
+    try { localStorage.setItem(K.ls, fecha); } catch (e) {}
+    const el = document.getElementById(K.label); if (el) el.textContent = fecha;
+    if (!silencioso) _bkMsg('✅ Backup descargado');
+  } catch (e) { logError('generarBackup', e.message); if (!silencioso) _bkMsg('Error al generar backup: ' + e.message, 'err'); }
+}
+async function restaurarBackup(input) {
+  const K = _bkCfg(), C = _bkCtx();
+  const file = input.files && input.files[0];
+  if (!file) return;
+  try {
+    if (!C.ok) { _bkMsg(C.msg, 'err'); return; }
+    const bk = JSON.parse(await file.text());
+    if (bk.app !== K.app) { _bkMsg('El archivo no es un backup de ' + K.app, 'err'); return; }
+    const ops = _bkOps(bk, C);
+    if (!confirm('Se van a volver a cargar ' + ops.length + ' registros en tu cuenta. Los que ya existen se reemplazan por los del archivo; el resto queda como está. ¿Continuar?')) return;
+    _bkMsg('Restaurando…');
+    await _bkEscribir(ops);
+    _bkMsg('✅ Backup restaurado (' + ops.length + ' registros)');
+    setTimeout(function () { location.reload(); }, 1500);
+  } catch (e) { logError('restaurarBackup', e.message); _bkMsg('Error al restaurar: ' + e.message, 'err'); }
+  finally { input.value = ''; }
+}
+function chequearBackupDiario() {
+  const K = _bkCfg(), C = _bkCtx();
+  if (!C.ok) return;
+  let ultimo = null; try { ultimo = localStorage.getItem(K.ls); } catch (e) {}
+  const el = document.getElementById(K.label); if (el && ultimo) el.textContent = ultimo;
+  if (ultimo !== _bkHoy()) setTimeout(function () { generarBackup(true); }, 5000);
+}
+window.generarBackup = generarBackup; window.restaurarBackup = restaurarBackup;
+// ══════════ FIN BACKUP ══════════
 </script>
 
 <!--
