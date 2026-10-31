@@ -1263,8 +1263,9 @@ async function intentarUnirseAGrupo(){
     if(!grupoSnap.exists()){toast("El grupo ya no existe","err");activeInviteGrupo=null;limpiarURLInvite();return;}
     const grupo=grupoSnap.data();
     if((grupo.miembros||[]).includes(me.uid)){toast("Ya formás parte de este grupo","warn");activeInviteGrupo=null;limpiarURLInvite();return;}
-    const ownerSnap=await getDoc(doc(db,"usuarios",grupo.ownerUid));
-    const limite=ownerSnap.data()?.features?.limiteIntegrantes??1;
+    // El límite real lo valida Firestore (reglas); acá solo se intenta leerlo para avisar mejor. Si no se puede leer, se deja que decida el servidor.
+    let limite=Infinity;
+    try{const ownerSnap=await getDoc(doc(db,"usuarios",grupo.ownerUid));limite=ownerSnap.data()?.features?.limiteIntegrantes??1;}catch(e){limite=Infinity;}
     if((grupo.miembros||[]).length>=limite){
       toast("Este grupo ya alcanzó su límite de integrantes","err");activeInviteGrupo=null;limpiarURLInvite();return;
     }
@@ -1708,7 +1709,7 @@ window.generarBackup = generarBackup; window.restaurarBackup = restaurarBackup;
 </script>
 
 <!--
-FIRESTORE SECURITY RULES
+FIRESTORE SECURITY RULES  (OBSOLETAS: las vigentes están en el repo raventechs/gasar → qa/rules/miagenda.rules)
 
 rules_version = '2';
 service cloud.firestore {
