@@ -597,9 +597,9 @@ var __rtPWA = (function() {
 <div id="demo-wall">
   <div class="demo-card">
     <div class="demo-icon">⏳</div>
-    <div class="demo-title">Tu demo de 24hs terminó</div>
+    <div class="demo-title">Tu prueba gratis terminó</div>
     <div class="demo-sub">Gracias por probar MiAgenda. Para seguir organizando tus exámenes y tareas, contactanos y te activamos tu cuenta.</div>
-    <a href="mailto:ventas@raventechsapp.com?subject=Quiero activar MiAgenda&body=Hola, probé la demo y me interesa continuar." class="btn-demo-email">✉️ Contactar por email</a>
+    <a href="https://wa.me/5491136547592?text=Hola%20RavenTechs%2C%20quiero%20activar%20mi%20cuenta%20de%20MiAgenda" target="_blank" rel="noopener" class="btn-demo-email">📲 Activar mi cuenta por WhatsApp</a>
     <button class="btn-demo-logout" id="btn-demo-logout">Cerrar sesión</button>
   </div>
 </div>
@@ -851,7 +851,7 @@ document.getElementById("atab-tareas").addEventListener("click",()=>{
 document.getElementById("btn-admin-exit").addEventListener("click",()=>{if(me)showScreen("screen-app");else showScreen("screen-login");});
 
 // ── DEMO HELPERS ──────────────────────────────────────────
-const DEMO_MS=24*60*60*1000;
+const DEMO_MS=14*24*60*60*1000; // prueba gratis: 14 días
 let userDoc=null;
 
 function getDemoRestante(data){
@@ -868,10 +868,10 @@ function checkDemo(){
   if(restante<=0){document.getElementById('demo-wall').classList.add('open');return;}
   const h=Math.floor(restante/3600000);
   const m=Math.floor((restante%3600000)/60000);
-  const urgente=restante<3600000;
+  const urgente=restante<3*86400000;
   const cd=document.createElement('span');
   cd.className='demo-countdown'+(urgente?' urgente':'');
-  cd.textContent='⏱ '+(h>0?h+'h '+m+'m':m+'m');
+  cd.textContent=(restante>=86400000?'🎓 Prueba: '+Math.ceil(restante/86400000)+' días':'⏱ '+(h>0?h+'h '+m+'m':m+'m'));
   document.getElementById('header-right')?.appendChild(cd);
 }
 
